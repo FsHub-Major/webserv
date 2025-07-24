@@ -146,17 +146,22 @@ int main(int ac, char *av[]) {
         if (FD_ISSET(server_fd, &readfds)) {
             // 5. New connection
             new_socket = accept(server_fd, (struct sockaddr*)&address, &addrlen);
-            
-            printf("New connection: socket fd is %d, IP is %s, port %d\n",
-                   new_socket, inet_ntoa(address.sin_addr), ntohs(address.sin_port));
+            if (new_socket >= 0)
+            {
+                printf("New connection: socket fd is %d, IP is %s, port %d\n",
+                    new_socket, inet_ntoa(address.sin_addr), ntohs(address.sin_port));
 
-            // Add to list of clients
-            for (int i = 0; i < MAX_CLIENTS; i++) {
-                if (client_sockets[i] == 0) {
-                    client_sockets[i] = new_socket;
-                    client_last_activity[i] = time(NULL);
-                    break;
+                // Add to list of clients
+                for (int i = 0; i < MAX_CLIENTS; i++) {
+                    if (client_sockets[i] == 0) {
+                        client_sockets[i] = new_socket;
+                        client_last_activity[i] = time(NULL);
+                        break;
+                    }
                 }
+            }
+            else{
+                perror("accept failed");
             }
         } 
          // 6. Handle client data : Check each client for incoming data
