@@ -2,6 +2,9 @@
 HTTP server from scratch 
 
 
+## Multiplexing 
+Multiplexing comes from the concept of "multiple signals over a single channel" - the term originates from telecommunications and electronics.
+
 
 ### Multiplexing logic uses 'select' : 
 
