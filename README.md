@@ -3,9 +3,15 @@ HTTP server from scratch
 
 
 
-Multiplexing logic uses 'select' : 
+### Multiplexing logic uses 'select' : 
 
-No context switching between threads / non-blocking I/O / relies on kernel for event notification / process sleeps until kernel signals activity
+#### key features: 
+
+- No thread context switching (single-threaded)
+- Non-blocking I/O (after `select()` returns)
+- Kernel-based event notification (relies on OS efficiency)
+- Process sleeps until activity (CPU efficient)
+
 
 1. select() BLOCKS ────► Kernel monitors: server_fd, client_sockets[0-19]
                                                     │
