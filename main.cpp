@@ -10,9 +10,11 @@
 #include <string>
 #include <fstream>
 #include <cstdio> 
+#include <time.h> // time functions 
+#include <sys/time.h> //gettimeofday
 
 #define MAX_CLIENTS 20
-
+#define CLIENT_TIMEOUT 30 // in sec
 
 int load_port(const std::string& path) {
     std::ifstream cfg(path);
@@ -60,10 +62,15 @@ int main(int ac, char *av[]) {
 
     // fds for server + clients  
     int server_fd, new_socket, client_sockets[MAX_CLIENTS];
+    time_t client_last_activity[MAX_CLIENTS];
     fd_set readfds;
 
 
-    for (int i = 0; i < MAX_CLIENTS; i++) client_sockets[i] = 0;
+    for (int i = 0; i < MAX_CLIENTS; i++) 
+    {
+        client_sockets[i] = 0;
+        client_last_activity[i] = 0;
+    }
 
     server_fd = socket(AF_INET, SOCK_STREAM, 0);
     if (server_fd == -1) {
@@ -99,20 +106,37 @@ int main(int ac, char *av[]) {
     std::cout << "Server listening on port " << port << "...\n";
 
     while (true) {
+        struct timeval timeout;
+        timeout.tv_sec = 5; // check every 5 sec
+        timeout.tv_usec = 0;
 
         FD_ZERO(&readfds);
         FD_SET(server_fd, &readfds);
         int max_sd = server_fd;
 
+        time_t current_time = time(NULL);
         // Add client sockets to the read set
         for (int i = 0; i < MAX_CLIENTS; i++) {
             int sd = client_sockets[i];
-            if (sd > 0) FD_SET(sd, &readfds);
-            if (sd > max_sd) max_sd = sd;
+            if (sd > 0)
+            {
+                if (current_time - client_last_activity[i] > CLIENT_TIMEOUT)
+                {
+                    printf("Client timeout: socket fd %d\n", sd);
+                    close(sd);
+                    client_sockets[i] = 0;
+                    client_last_activity[i] = 0;
+                }
+                else
+                {
+                    FD_SET(sd, &readfds);
+                    if (sd > max_sd) max_sd = sd;
+                }
+            } 
         }
 
         // blocking Wait for activity on any socket: Event-driven (CPU sleeps)
-        int activity = select(max_sd + 1, &readfds, NULL, NULL, NULL);
+        int activity = select(max_sd + 1, &readfds, NULL, NULL, &timeout);
         if (activity < 0) {
             perror("select");
             break;
@@ -122,6 +146,7 @@ int main(int ac, char *av[]) {
         if (FD_ISSET(server_fd, &readfds)) {
             // 5. New connection
             new_socket = accept(server_fd, (struct sockaddr*)&address, &addrlen);
+            
             printf("New connection: socket fd is %d, IP is %s, port %d\n",
                    new_socket, inet_ntoa(address.sin_addr), ntohs(address.sin_port));
 
@@ -129,6 +154,7 @@ int main(int ac, char *av[]) {
             for (int i = 0; i < MAX_CLIENTS; i++) {
                 if (client_sockets[i] == 0) {
                     client_sockets[i] = new_socket;
+                    client_last_activity[i] = time(NULL);
                     break;
                 }
             }
@@ -136,7 +162,7 @@ int main(int ac, char *av[]) {
          // 6. Handle client data : Check each client for incoming data
         for (int i = 0; i < MAX_CLIENTS; i++) {
             int sd = client_sockets[i];
-            if (FD_ISSET(sd, &readfds)) {
+            if (sd > 0 && FD_ISSET(sd, &readfds)) {
                 char buffer[1024] = {0};
                 int valread = read(sd, buffer, sizeof(buffer));
                 if (valread == 0) {
@@ -146,6 +172,7 @@ int main(int ac, char *av[]) {
                            inet_ntoa(address.sin_addr), ntohs(address.sin_port));
                     close(sd);
                     client_sockets[i] = 0;
+                    client_last_activity[i] = 0;
                 } else {
                     // Echo message back
                     buffer[valread] = '\0';
