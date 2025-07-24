@@ -3,11 +3,15 @@
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
+#include <arpa/inet.h>
 #include <unistd.h>
 #include <iostream>
 #include <cstring>
 #include <string>
 #include <fstream>
+#include <cstdio> 
+
+#define MAX_CLIENTS 20
 
 
 int load_port(const std::string& path) {
@@ -38,10 +42,7 @@ int main(int ac, char *av[]) {
     {
         cfg_path = av[1];
     }else
-    {
-
         cfg_path = "./server.conf";
-    }
     std::ifstream test_file(cfg_path.c_str());
     if (!test_file.is_open()) {
         std::cerr << "Configuration file not found: " << cfg_path << "\n";
@@ -57,7 +58,14 @@ int main(int ac, char *av[]) {
     }
     std::cout << "Using port " << port << " from config: " << cfg_path << "\n";
 
-    int server_fd = socket(AF_INET, SOCK_STREAM, 0);
+    // fds for server + clients  
+    int server_fd, new_socket, client_sockets[MAX_CLIENTS];
+    fd_set readfds;
+
+
+    for (int i = 0; i < MAX_CLIENTS; i++) client_sockets[i] = 0;
+
+    server_fd = socket(AF_INET, SOCK_STREAM, 0);
     if (server_fd == -1) {
         perror("socket");
         return 1;
@@ -74,6 +82,7 @@ int main(int ac, char *av[]) {
     address.sin_family = AF_INET;
     address.sin_addr.s_addr = INADDR_ANY;
     address.sin_port = htons(port);
+    socklen_t addrlen = sizeof(address);
 
     if (bind(server_fd, reinterpret_cast<sockaddr*>(&address), sizeof(address)) == -1) {
         perror("bind");
@@ -81,7 +90,7 @@ int main(int ac, char *av[]) {
         return 1;
     }
 
-    if (listen(server_fd, 10) == -1) {
+    if (listen(server_fd, 128) == -1) {
         perror("listen");
         close(server_fd);
         return 1;
@@ -90,36 +99,61 @@ int main(int ac, char *av[]) {
     std::cout << "Server listening on port " << port << "...\n";
 
     while (true) {
-        sockaddr_in client_addr ;
-        socklen_t client_len = sizeof(client_addr);
-        int client_fd = accept(server_fd, reinterpret_cast<sockaddr*>(&client_addr), &client_len);
-        if (client_fd == -1) {
-            perror("accept");
-            continue;
+
+        FD_ZERO(&readfds);
+        FD_SET(server_fd, &readfds);
+        int max_sd = server_fd;
+
+        // Add client sockets to the read set
+        for (int i = 0; i < MAX_CLIENTS; i++) {
+            int sd = client_sockets[i];
+            if (sd > 0) FD_SET(sd, &readfds);
+            if (sd > max_sd) max_sd = sd;
         }
 
-        // Read request (not fully parsing here)
-        char buffer[1024];
-        ssize_t bytes = read(client_fd, buffer, sizeof(buffer) - 1);
-        if (bytes > 0) {
-            buffer[bytes] = '\0';
-            std::cout << "Request:\n" << buffer << "\n";
+        // blocking Wait for activity on any socket
+        int activity = select(max_sd + 1, &readfds, NULL, NULL, NULL);
+        if (activity < 0) {
+            perror("select");
+            break;
         }
 
-        // Prepare simple HTTP response
-        const char* response =
-            "HTTP/1.1 200 OK\r\n"
-            "Content-Type: text/plain\r\n"
-            "Content-Length: 25\r\n"
-            "Connection: close\r\n"
-            "\r\n"
-            "Hello from C++ HTTP server!";
+        // Handle new conneciton 
+        if (FD_ISSET(server_fd, &readfds)) {
+            // 5. New connection
+            new_socket = accept(server_fd, (struct sockaddr*)&address, &addrlen);
+            printf("New connection: socket fd is %d, IP is %s, port %d\n",
+                   new_socket, inet_ntoa(address.sin_addr), ntohs(address.sin_port));
 
-        // Send response
-        send(client_fd, response, strlen(response), 0);
-
-        close(client_fd);
-    }
+            // Add to list of clients
+            for (int i = 0; i < MAX_CLIENTS; i++) {
+                if (client_sockets[i] == 0) {
+                    client_sockets[i] = new_socket;
+                    break;
+                }
+            }
+        } 
+         // 6. Handle client data : Check each client for incoming data
+        for (int i = 0; i < MAX_CLIENTS; i++) {
+            int sd = client_sockets[i];
+            if (FD_ISSET(sd, &readfds)) {
+                char buffer[1024] = {0};
+                int valread = read(sd, buffer, sizeof(buffer));
+                if (valread == 0) {
+                    // Connection closed
+                    getpeername(sd, (struct sockaddr*)&address, &addrlen);
+                    printf("Client disconnected: IP %s, port %d\n",
+                           inet_ntoa(address.sin_addr), ntohs(address.sin_port));
+                    close(sd);
+                    client_sockets[i] = 0;
+                } else {
+                    // Echo message back
+                    buffer[valread] = '\0';
+                    send(sd, buffer, strlen(buffer), 0);
+                }
+            }
+        }
+    } 
 
     close(server_fd);
     return 0;
