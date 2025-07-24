@@ -111,7 +111,7 @@ int main(int ac, char *av[]) {
             if (sd > max_sd) max_sd = sd;
         }
 
-        // blocking Wait for activity on any socket
+        // blocking Wait for activity on any socket: Event-driven (CPU sleeps)
         int activity = select(max_sd + 1, &readfds, NULL, NULL, NULL);
         if (activity < 0) {
             perror("select");
