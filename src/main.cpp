@@ -44,7 +44,7 @@ int main(int ac, char *av[]) {
     {
         cfg_path = av[1];
     }else
-        cfg_path = "./server.conf";
+        cfg_path = "./config/server.conf";
     std::ifstream test_file(cfg_path.c_str());
     if (!test_file.is_open()) {
         std::cerr << "Configuration file not found: " << cfg_path << "\n";
