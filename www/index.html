@@ -1,0 +1,138 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WebServ - HTTP Server</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background-color: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #333;
+            text-align: center;
+            border-bottom: 2px solid #007acc;
+            padding-bottom: 10px;
+        }
+        .feature {
+            background-color: #f8f9fa;
+            padding: 15px;
+            margin: 10px 0;
+            border-left: 4px solid #007acc;
+            border-radius: 5px;
+        }
+        .status {
+            background-color: #d4edda;
+            color: #155724;
+            padding: 10px;
+            border-radius: 5px;
+            text-align: center;
+            margin: 20px 0;
+        }
+        .code {
+            background-color: #f1f1f1;
+            padding: 10px;
+            border-radius: 5px;
+            font-family: 'Courier New', monospace;
+            margin: 10px 0;
+        }
+        .authors {
+            background-color: #e8f4f8;
+            padding: 20px;
+            border-radius: 8px;
+            text-align: center;
+            margin: 20px 0;
+            border: 2px solid #007acc;
+        }
+        .author-name {
+            display: inline-block;
+            margin: 0 15px;
+            font-weight: bold;
+            color: #007acc;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🚀 WebServ HTTP Server</h1>
+        
+        <div class="status">
+            ✅ Server is running successfully!
+        </div>
+
+        <div class="authors">
+            <h3>👥 Project Authors</h3>
+            <p>
+                <span class="author-name">Ayoub Elmohamedi</span> •
+                <span class="author-name">Hiba Chokri</span> •
+                <span class="author-name">Yassir Sbai</span>
+            </p>
+        </div>
+
+        <h2>📋 Server Features</h2>
+        
+        <div class="feature">
+            <h3>🔄 I/O Multiplexing</h3>
+            <p>Uses <code>select()</code> system call for efficient handling of multiple client connections without threading.</p>
+        </div>
+
+        <div class="feature">
+            <h3>⚡ Non-blocking I/O</h3>
+            <p>Single-threaded event-driven architecture for high performance and low resource usage.</p>
+        </div>
+
+        <div class="feature">
+            <h3>🔧 Configuration</h3>
+            <p>Configurable port settings via <code>server.conf</code> file.</p>
+        </div>
+
+        <div class="feature">
+            <h3>⏰ Client Timeouts</h3>
+            <p>Automatic cleanup of inactive connections after 30 seconds.</p>
+        </div>
+
+        <h2>📊 Server Info</h2>
+        <div class="code">
+            Max Clients: 20<br>
+            Timeout: 30 seconds<br>
+            Protocol: HTTP/1.1<br>
+            Architecture: Event-driven
+        </div>
+
+        <h2>🧪 Test Commands</h2>
+        <div class="code">
+            # Test with curl:<br>
+            curl http://localhost:8080<br><br>
+            
+            # Test with telnet:<br>
+            telnet localhost 8080<br><br>
+            
+            # Multiple connections:<br>
+            ./spawnTest
+        </div>
+
+        <h2>🎯 Implementation Highlights</h2>
+        <ul>
+            <li><strong>select() multiplexing</strong> - handles multiple clients efficiently</li>
+            <li><strong>No thread context switching</strong> - CPU efficient</li>
+            <li><strong>Kernel-based event notification</strong> - relies on OS efficiency</li>
+            <li><strong>Process sleeps until activity</strong> - power efficient</li>
+        </ul>
+
+        <footer style="text-align: center; margin-top: 30px; color: #666;">
+            <p>Built from scratch in C++ • 2025</p>
+        </footer>
+    </div>
+</body>
+</html>
