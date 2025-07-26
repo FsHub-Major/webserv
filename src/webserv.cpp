@@ -1,37 +1,32 @@
 // Minimal HTTP server in C++ using BSD sockets
 
-#include <sys/types.h>
-#include <sys/socket.h>
-#include <netinet/in.h>
-#include <arpa/inet.h>
-#include <unistd.h>
-#include <iostream>
-#include <cstring>
-#include <string>
-#include <fstream>
-#include <cstdio> 
-#include <time.h> // time functions 
-#include <sys/time.h> //gettimeofday
+#include "webserv.hpp"
+#include "macros.hpp"
 
-#define MAX_CLIENTS 20
-#define CLIENT_TIMEOUT 30 // in sec
+
+Core::Core()
+{
+    cfg_file = "./config/server.conf";
+}
+
+
 
 int load_port(const std::string& path) {
-    std::ifstream cfg(path);
-    if (!cfg.is_open()) {
+    std::ifstream cfg(path.c_str());
+    std::vector<std::string> tokens;
+
+    if (!cfg.is_open())
+    {
         std::cerr << "Failed to open config file: " << path << "\n";
         return -1;
     }
     std::string line;
-    while (std::getline(cfg, line)) {
-        if (line.rfind("port=", 0) == 0) {
-            try {
-                return std::stoi(line.substr(5));
-            } catch (...) {
-                std::cerr << "Invalid port value in config: " << line << "\n";
-                return -1;
-            }
-        }
+    while (std::getline(cfg, line))
+        tokens = split(line, " =");
+    for (size_t i = 0; i < tokens.size(); i++)
+    {
+        if (tokens[i] == "port")
+            return (stringtoi(tokens[i + 1]));
     }
     std::cerr << "No port setting found in config file\n";
     return -1;
@@ -39,26 +34,26 @@ int load_port(const std::string& path) {
 
 int main(int ac, char *av[]) {
 
-    std::string cfg_path;
-    if (ac > 1)
-    {
-        cfg_path = av[1];
-    }else
-        cfg_path = "./config/server.conf";
-    std::ifstream test_file(cfg_path.c_str());
+    Core server;
+
+    if (ac > 2)
+        std::cout << "Usage: webserv [<config_file_path>]" << std::endl;
+    if (ac == 2)
+        server.cfg_file = av[1];
+    std::ifstream test_file(server.cfg_file.c_str());
     if (!test_file.is_open()) {
-        std::cerr << "Configuration file not found: " << cfg_path << "\n";
+        std::cerr << "Configuration file not found: " << server.cfg_file << "\n";
         return 1;
     }
     test_file.close();
  
-    const int port = load_port(cfg_path);
+    const int port = load_port(server.cfg_file);
 
     if (port <= 0 || port > 65535) {
         std::cerr << "Invalid port loaded: " << port << "\n";
         return 1;
     }
-    std::cout << "Using port " << port << " from config: " << cfg_path << "\n";
+    std::cout << "Using port " << port << " from config: " << server.cfg_file << "\n";
 
     // fds for server + clients  
     int server_fd, new_socket, client_sockets[MAX_CLIENTS];
@@ -75,13 +70,6 @@ int main(int ac, char *av[]) {
     server_fd = socket(AF_INET, SOCK_STREAM, 0);
     if (server_fd == -1) {
         perror("socket");
-        return 1;
-    }
-
-    int opt = 1;
-    if (setsockopt(server_fd, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt)) == -1) {
-        perror("setsockopt");
-        close(server_fd);
         return 1;
     }
 
@@ -179,9 +167,16 @@ int main(int ac, char *av[]) {
                     client_sockets[i] = 0;
                     client_last_activity[i] = 0;
                 } else {
-                    // Echo message back
+                    // Send HTTP response instead of echo
                     buffer[valread] = '\0';
-                    send(sd, buffer, strlen(buffer), 0);
+                    std::string http_response = 
+                        "HTTP/1.1 200 OK\r\n"
+                        "Content-Type: text/html\r\n"
+                        "Content-Length: 13\r\n"
+                        "\r\n"
+                        "Hello World!";
+                    send(sd, http_response.c_str(), http_response.length(), 0);
+                    client_last_activity[i] = time(NULL);  // Update activity time
                 }
             }
         }
