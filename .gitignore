@@ -1,6 +1,9 @@
 # Prerequisites
 *.d
 
+**/*.o
+webserv
+.vscode/
 # Compiled Object files
 *.slo
 *.lo
