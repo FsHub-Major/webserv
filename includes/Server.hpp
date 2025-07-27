@@ -4,15 +4,19 @@
 #pragma once
 
 #include "Config.hpp"
-#include <socket.hpp>
-
+#include "ClientManager.hpp"
+#include <sys/socket.h>
+#include <netinet/in.h>
 
 class Server {
 
     private:
         const ServerConfig config;
-        ClientManager clients; 
+        ClientManager clients;
+        sockaddr_in address ;
 
+        int port;
+        int server_fd;
         bool is_running;
         bool is_init;
 
@@ -21,17 +25,22 @@ class Server {
         ~Server();
 
         bool init();
-        void clean();
+        void cleanup();
 
         void run();
         void stop();
 
         bool handleConnection();
         void processRequest(fd_set * readfds);
-    
+
+        int getPort() const;
+        int getServerFd() const;
+        bool isRunning() const;
+        bool isInitialized() const;
+
+
     private:
-
-
-
-
-}
+        Server(const Server&);
+        Server& operator=(const Server&);
+        
+};
