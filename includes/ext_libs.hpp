@@ -8,6 +8,7 @@
 #include <vector>
 #include <climits>
 #include <sstream>
+#include <map>
 #include <iostream>
 #include <cstring>
 #include <string>
@@ -17,4 +18,5 @@
 #include <sys/time.h> //gettimeofday
 
 std::vector<std::string> split(const std::string& s, std::string delimiters);
+std::string trim(const std::string& str, const std::string& trim_chars);
 int stringtoi(std::string string);
