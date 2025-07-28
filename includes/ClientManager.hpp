@@ -5,6 +5,7 @@
 #include "Config.hpp"
 #include "ext_libs.hpp"
 #include "macros.hpp"
+#include <map>
 
 struct Client {
     int socket_fd;
@@ -17,21 +18,20 @@ struct Client {
 
 class ClientManager {
 private:
-    Client clients[MAX_CLIENTS];
+    std::map<int, Client> clients;
     
 public:
     ClientManager();
     ~ClientManager();
     
     bool addClient(int socket_fd, const struct sockaddr_in& addr);
-    void removeClient(int index);
-    void removeClientBySocket(int socket_fd);
+    void removeClient(int socket_fd);
     
     void updateActivity(int socket_fd);
     void checkTimeouts();
     
-    void setupSelectFds(fd_set* readfds, int* max_fd);
-    void processClientActivity(const fd_set* readfds);
+    void setupClientFds(fd_set* readfds, int* max_fd);
+    void processClientRequest(const fd_set* readfds);
     
     int getClientCount() const;
     bool isFull() const;
