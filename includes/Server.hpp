@@ -25,9 +25,8 @@ class Server {
         Server(const ServerConfig &config);
         ~Server();
 
-        bool init();
-        void cleanup();
 
+        bool init();
         void run();
         void stop();
 
@@ -43,5 +42,6 @@ class Server {
     private:
         Server(const Server&);
         Server& operator=(const Server&);
+        void cleanup();
         
 };
