@@ -63,6 +63,12 @@ bool Server::handleConnection()
 
 }
 
+
+void processRequest(fd_set * readfds)
+{
+
+}
+
 int Server::getPort() const {
     return port;
 }
