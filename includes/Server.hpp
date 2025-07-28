@@ -30,7 +30,7 @@ class Server {
         void run();
         void stop();
 
-        bool handleConnection();
+        bool handleNewConnection();
         void processRequest(fd_set * readfds);
 
         int getPort() const;
