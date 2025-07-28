@@ -93,6 +93,8 @@ int main(int ac, char *av[]) {
 
     std::cout << "Server listening on port " << port << "...\n";
 
+
+    // Server runs forever, handling multiple clients
     while (true) {
         struct timeval timeout;
         timeout.tv_sec = 5; // check every 5 sec
