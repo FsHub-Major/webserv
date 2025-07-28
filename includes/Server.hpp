@@ -7,6 +7,7 @@
 #include "ClientManager.hpp"
 #include <sys/socket.h>
 #include <netinet/in.h>
+#include <iostream>
 
 class Server {
 

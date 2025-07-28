@@ -4,8 +4,6 @@
 #include "macros.hpp"
 
 
-
-
 Server::Server(const ServerConfig & config)
         : config(config), clients(), server_fd(-1) ,is_running(false), is_init(false)
 {
@@ -39,15 +37,17 @@ bool Server::init()
     if (bind(server_fd, reinterpret_cast<sockaddr*>(&address), sizeof(address)) == -1) {
         perror("bind");
         close(server_fd);
-        return 1;
+        return (false);
     }
-
+    // 128 backlog queue (pending clients) , not MAX_CLIENTS of concurrent clients
     if (listen(server_fd, 128) == -1) {
         perror("listen");
         close(server_fd);
-        return 1;
-    }
-    
+        return (false);
+    } 
+    is_init = true;
+    std::cout << "Server listening on port " << port << "...\n";
+    return (true);
 }
 
 void Server::run() {
