@@ -32,6 +32,8 @@ int load_port(const std::string& path) {
     return -1;
 }
 
+
+
 int main(int ac, char *av[]) {
 
     Core server;
@@ -39,21 +41,24 @@ int main(int ac, char *av[]) {
     if (ac > 2)
         std::cout << "Usage: webserv [<config_file_path>]" << std::endl;
     if (ac == 2)
-        server.cfg_file = av[1];
-    std::ifstream test_file(server.cfg_file.c_str());
+        server.config_path = av[1];
+
+    std::ifstream test_file(server.config_path.c_str());
     if (!test_file.is_open()) {
-        std::cerr << "Configuration file not found: " << server.cfg_file << "\n";
+        std::cerr << "Configuration file not found: " << server.config_path << "\n";
         return 1;
     }
     test_file.close();
  
-    const int port = load_port(server.cfg_file);
+    const int port = load_port(server.config_path);
 
     if (port <= 0 || port > 65535) {
         std::cerr << "Invalid port loaded: " << port << "\n";
         return 1;
     }
-    std::cout << "Using port " << port << " from config: " << server.cfg_file << "\n";
+    std::cout << "Using port " << port << " from config: " << server.config_path << "\n";
+
+    
 
     // fds for server + clients  
     int server_fd, new_socket, client_sockets[MAX_CLIENTS];

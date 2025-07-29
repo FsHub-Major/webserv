@@ -17,5 +17,5 @@ class Core
         int port;
         std::string ip;
         Core();
-        std::string cfg_file;
+        std::string config_path;
 };
