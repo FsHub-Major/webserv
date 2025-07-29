@@ -23,6 +23,19 @@ ClientManager::~ClientManager() {
 }
 
 
+void ClientManager::setupClientFds(fd_set* readfds, int* max_fd)
+{
+    for (std::map<int, Client>::iterator it = clients.begin(); it != clients.end(); ++it)
+    {
+        int socket_fd = it->first;
+        FD_SET(socket_fd, readfds);
+        if (socket_fd > *max_fd) {
+            *max_fd = socket_fd;
+        }
+    }
+}
+
+
 bool ClientManager::addClient(int socket_fd, const struct sockaddr_in& addr) {
     if (isFull()) {
         std::cerr << "ClientManager: Maximum clients reached (" << MAX_CLIENTS << ")" << std::endl;
@@ -60,9 +73,6 @@ void ClientManager::removeClient(int socket_fd) {
 }
 
 
-
-
-
 int ClientManager::getClientCount() const {
     return (clients.size()); // cast to int ?  
 }
@@ -77,5 +87,25 @@ void ClientManager::updateActivity(int socket_fd) {
     std::map<int, Client>::iterator it = clients.find(socket_fd);
     if (it != clients.end()) {
         it->second.last_activity = time(NULL);
+    }
+}
+
+
+void ClientManager::checkTimeouts()
+{
+    time_t current_time = time(NULL);
+    std::map<int, Client>::iterator it = clients.begin();
+    while (it != clients.end())
+    {
+        if (current_time - it->second.last_activity > CLIENT_TIMEOUT)
+        {
+            printf("Client timeout: socket fd %d\n", it->first);
+            close(it->first);
+            clients.erase(it++); // post increament
+        }
+        else{
+            ++it;
+        }
+
     }
 }
