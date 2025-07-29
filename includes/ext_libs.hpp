@@ -7,6 +7,7 @@
 #include <unistd.h>
 #include <vector>
 #include <climits>
+#include <sys/stat.h>
 #include <sstream>
 #include <map>
 #include <iostream>
