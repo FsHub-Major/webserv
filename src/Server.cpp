@@ -96,6 +96,26 @@ bool Server::handleNewConnection()
     return (true); 
 }
 
+void Server::processRequest(fd_set* readfds)
+{
+    if (!readfds) return ;
+
+    clients.processClientRequest(readfds);
+    clients.checkTimeouts();
+};
+
+
+void Server::cleanup()
+{
+    if (server_fd != -1)
+    {
+        close(server_fd);
+        server_fd = -1;
+    }
+    is_running = false;
+    is_init = false;
+}
+
 int Server::getPort() const {
     return port;
 }
@@ -106,6 +126,11 @@ int Server::getServerFd() const {
 
 bool Server::isRunning() const {
     return is_running;
+}
+
+void Server::stop()
+{
+    is_running = false;
 }
 
 bool Server::isInitialized() const {
