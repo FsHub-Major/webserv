@@ -9,6 +9,11 @@ HttpRequest::HttpRequest(const std::string &request)
 
 HttpRequest::HttpRequest(void)
 {
+    isQuery = false;
+}
+
+void HttpRequest::parseQuery(void)
+{
 
 }
 
@@ -22,6 +27,11 @@ bool HttpRequest::parseRequest(const std::string &request)
     std::istringstream req_stream(request);
     req_stream >> method >> uri >> httpVersion;
 
+    if (uri.find('?'))
+    {
+        parseQuery();
+        isQuery = true;
+    }
     std::getline(req_stream, line);
     while (std::getline(req_stream, line) && line != "\r")
     {

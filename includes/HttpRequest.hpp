@@ -8,7 +8,7 @@ private:
     std::string method;          // GET, POST, PUT, DELETE, etc.
     std::string uri;            // /path/to/resource
     std::string httpVersion;    // HTTP/1.1
-    
+
     // Headers
     std::map<std::string, std::string> headers;
     std::string rawHeaders;
@@ -23,12 +23,11 @@ private:
     std::string host;
     int contentLength;
     std::string contentType;
-    bool keepAlive;
     
     // Raw request data
     std::string rawRequest;
-
-public:
+ public:
+    bool    isQuery;
     // Constructor
     HttpRequest();
     HttpRequest(const std::string& rawRequest);
@@ -45,4 +44,6 @@ public:
     const std::string &getHttpVersion() const;
     const std::map<std::string, std::string>& getHeaders() const;
     const std::string &getHeader(const std::string& key) const;
+ private:
+    void  parseQuery();
 };
