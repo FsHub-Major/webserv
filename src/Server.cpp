@@ -15,7 +15,6 @@ Server::Server(const ServerConfig & config)
 
 }
 
-
 Server::~Server()
 {
     cleanup();
@@ -50,6 +49,19 @@ bool Server::init()
     return (true);
 }
 
+
+void Server::setupSelectFds(fd_set* readfds, int* max_fd)
+{
+    if (!readfds || !max_fd)
+        return ;
+    
+    FD_SET(server_fd, readfds);
+    if (server_fd > *max_fd){
+        *max_fd = server_fd;
+    }
+    clients.setupClientFds(readfds, max_fd);
+}
+
 void Server::run() {
     if (!is_init) {
         std::cerr << "Server not initialized" << std::endl;
@@ -79,104 +91,10 @@ bool Server::handleNewConnection()
     {
         std::cerr << "Failed to add client - server full" << std::endl;
         close(new_socket);
+        return (false);
     }
     return (true); 
 }
-
-
-
-   while (true) {
-        struct timeval timeout;
-        timeout.tv_sec = 5; // check every 5 sec
-        timeout.tv_usec = 0;
-
-        FD_ZERO(&readfds);
-        FD_SET(server_fd, &readfds);
-        int max_sd = server_fd;
-
-        time_t current_time = time(NULL);
-        // Add client sockets to the read set
-        for (int i = 0; i < MAX_CLIENTS; i++) {
-            int sd = client_sockets[i];
-            if (sd > 0)
-            {
-                if (current_time - client_last_activity[i] > CLIENT_TIMEOUT)
-                {
-                    printf("Client timeout: socket fd %d\n", sd);
-                    close(sd);
-                    client_sockets[i] = 0;
-                    client_last_activity[i] = 0;
-                }
-                else
-                {
-                    FD_SET(sd, &readfds);
-                    if (sd > max_sd) max_sd = sd;
-                }
-            } 
-        }
-
-        // blocking Wait for activity on any socket: Event-driven (CPU sleeps)
-        int activity = select(max_sd + 1, &readfds, NULL, NULL, &timeout);
-        if (activity < 0) {
-            perror("select");
-            break;
-        }
-
-        // Handle new conneciton 
-        if (FD_ISSET(server_fd, &readfds)) {
-            // 5. New connection
-            new_socket = accept(server_fd, (struct sockaddr*)&address, &addrlen);
-            if (new_socket >= 0)
-            {
-                printf("New connection: socket fd is %d, IP is %s, port %d\n",
-                    new_socket, inet_ntoa(address.sin_addr), ntohs(address.sin_port));
-
-                // Add to list of clients
-                for (int i = 0; i < MAX_CLIENTS; i++) {
-                    if (client_sockets[i] == 0) {
-                        client_sockets[i] = new_socket;
-                        client_last_activity[i] = time(NULL);
-                        break;
-                    }
-                }
-            }
-            else{
-                perror("accept failed");
-            }
-        } 
-         // 6. Handle client data : Check each client for incoming data
-        for (int i = 0; i < MAX_CLIENTS; i++) {
-            int sd = client_sockets[i];
-            if (sd > 0 && FD_ISSET(sd, &readfds)) {
-                char buffer[1024] = {0};
-                int valread = read(sd, buffer, sizeof(buffer));
-                if (valread == 0) {
-                    // Connection closed
-                    getpeername(sd, (struct sockaddr*)&address, &addrlen);
-                    printf("Client disconnected: IP %s, port %d\n",
-                           inet_ntoa(address.sin_addr), ntohs(address.sin_port));
-                    close(sd);
-                    client_sockets[i] = 0;
-                    client_last_activity[i] = 0;
-                } else {
-                    // Send HTTP response instead of echo
-                    buffer[valread] = '\0';
-                    std::string http_response = 
-                        "HTTP/1.1 200 OK\r\n"
-                        "Content-Type: text/html\r\n"
-                        "Content-Length: 13\r\n"
-                        "\r\n"
-                        "Hello World!";
-                    send(sd, http_response.c_str(), http_response.length(), 0);
-                    client_last_activity[i] = time(NULL);  // Update activity time
-                }
-            }
-        }
-    } 
-
-    close(server_fd);
-
-
 
 int Server::getPort() const {
     return port;

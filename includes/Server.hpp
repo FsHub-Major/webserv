@@ -30,6 +30,8 @@ class Server {
         void run();
         void stop();
 
+
+        void setupSelectFds(fd_set* readfds, int* max_fd);
         bool handleNewConnection();
         void processRequest(fd_set * readfds);
 
