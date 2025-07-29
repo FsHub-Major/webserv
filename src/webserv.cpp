@@ -8,7 +8,7 @@
 
 Core::Core()
 {
-    cfg_file = "./config/server.conf";
+    config_path = "./config/server.conf";
 }
 
 
