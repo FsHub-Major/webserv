@@ -19,6 +19,8 @@
 #include <time.h> // time functions 
 #include <sys/time.h> //gettimeofday
 
+using namespace std; 
+
 std::vector<std::string> split(const std::string& s, std::string delimiters);
 std::string trim(const std::string& str, const std::string& trim_chars);
 int stringtoi(std::string string);
