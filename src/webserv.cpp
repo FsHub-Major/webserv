@@ -2,6 +2,8 @@
 
 #include "webserv.hpp"
 #include "macros.hpp"
+#include "Config.hpp"
+#include "Server.hpp"
 
 
 Core::Core()
@@ -58,8 +60,18 @@ int main(int ac, char *av[]) {
     }
     std::cout << "Using port " << port << " from config: " << server.config_path << "\n";
 
-    
+    ServerConfig server_config;
+    server_config.port = port;   
+    server_config.server_name = "localhost";
+    server_config.root = "./www";
+    server_config.index_files.push_back("index.html");
+    server_config.client_timeout = CLIENT_TIMEOUT;
+    server_config.client_max_body_size = 1024 * 1024;  // 1MB
 
+
+    std::cout << "Initializing sever on port" << std::endl;
+
+    
     // fds for server + clients  
     int server_fd, new_socket, client_sockets[MAX_CLIENTS];
     time_t client_last_activity[MAX_CLIENTS];
