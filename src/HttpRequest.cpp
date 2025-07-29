@@ -18,6 +18,7 @@ bool HttpRequest::parseRequest(const std::string &request)
     std::string key;
     std::string val;
 
+    rawRequest = request;
     std::istringstream req_stream(request);
     req_stream >> method >> uri >> httpVersion;
 
@@ -28,11 +29,8 @@ bool HttpRequest::parseRequest(const std::string &request)
         val = trim(line.substr(line.find_first_of(':') + 1), " \r");
         headers[key] = val;
     }
-
     while (std::getline(req_stream, line))
-    {
         body += line;
-    }
     return (true);
 }
 
