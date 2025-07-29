@@ -5,6 +5,7 @@
 #include <netinet/in.h>
 #include <arpa/inet.h>
 #include <unistd.h>
+#include <fcntl.h>      // for open() and O_* flags
 #include <vector>
 #include <climits>
 #include <sys/stat.h>
