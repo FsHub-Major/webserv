@@ -68,3 +68,34 @@ void HttpRequest::printRequest(void) const
     
     std::cout << "=========================" << std::endl;
 }
+
+// Getters implementation
+const std::string& HttpRequest::getMethod() const
+{
+    return (method);
+}
+
+const std::string& HttpRequest::getUri() const
+{
+    return (uri);
+}
+
+const std::string& HttpRequest::getHttpVersion() const
+{
+    return (httpVersion);
+}
+
+const std::map<std::string, std::string>& HttpRequest::getHeaders() const
+{
+    return (headers);
+}
+
+const std::string& HttpRequest::getHeader(const std::string& key) const
+{
+    static const std::string empty = "";
+    
+    std::map<std::string, std::string>::const_iterator it = headers.find(key);
+    if (it != headers.end())
+        return (it->second);
+    return (empty);
+}

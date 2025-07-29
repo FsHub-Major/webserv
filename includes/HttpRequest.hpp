@@ -38,4 +38,11 @@ public:
     
     // Utility functions
     void printRequest() const;
+
+    //getters
+    const std::string &getMethod() const;
+    const std::string &getUri() const;
+    const std::string &getHttpVersion() const;
+    const std::map<std::string, std::string>& getHeaders() const;
+    const std::string &getHeader(const std::string& key) const;
 };
