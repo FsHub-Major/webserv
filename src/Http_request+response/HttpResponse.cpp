@@ -1,5 +1,5 @@
 #include "HttpResponse.hpp"
-
+#include "Config.hpp"
 
 // Helper method to get reason phrase from status code
 std::string HttpResponse::getReasonPhraseFromCode(int statusCode)
@@ -113,8 +113,29 @@ void HttpResponse::updateContentLength()
 
 const std::string HttpResponse::createGetResponse(const HttpRequest &request) const
 {
+    struct stat fileStat;
+    int fd;
+    std::string path;
+
+    if (!request.getUri().find('?'))
+    {
+        path = ServerConfig::root + request.getUri();
+        path.insert(path.begin(), '.');
+        if (stat(path.c_str(), &fileStat) == 0)
+        {
+            if (access(path.c_str(), R_OK) == 0)
+            {
+                fd = open(path.c_str(), O_RDONLY);
+                if (fd > 0)
+                {
+
+                }
+            }
+        }
+    }
 
 }
+
 
 std::string HttpResponse::createResponse(const HttpRequest &request)
 {
