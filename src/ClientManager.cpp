@@ -9,17 +9,14 @@
 #include <arpa/inet.h>
 
 ClientManager::ClientManager() {
-    for (int i = 0; i < MAX_CLIENTS; i++) {
-        clients[i] = Client();
-    }
+    
 }
 
 ClientManager::~ClientManager() {
-    for (int i = 0; i < MAX_CLIENTS; i++) {
-        if (clients[i].is_active) {
-            close(clients[i].socket_fd);
-        }
+    for (std::map<int, Client>::iterator it = clients.begin(); it != clients.end(); ++it) {
+        close(it->first); 
     }
+    clients.clear();
 }
 
 
