@@ -78,7 +78,47 @@ bool ClientManager::isFull() const {
     return clients.size() >= MAX_CLIENTS;
 }
 
+void ClientManager::processClientRequest(const fd_set* readfds) {
+    std::map<int, Client>::iterator it = clients.begin();
+    
+    while (it != clients.end()) {
+        int socket_fd = it->first;
+        if (FD_ISSET(socket_fd, readfds)) {
+            char buffer[1024] = {0};
+            int valread = read(socket_fd, buffer, sizeof(buffer));
+            
+            if (valread == 0) {
+                // Connection closed by client
+                printf("Client disconnected: socket fd %d\n", socket_fd);
+                close(socket_fd);
+                clients.erase(it++);
+            } else if (valread > 0) {
+                // Process the request and send response
+                buffer[valread] = '\0';
+                sendHttpResponse(socket_fd);
+                updateActivity(socket_fd);
+                ++it;
+            } else {
+                // Read error
+                perror("read");
+                close(socket_fd);
+                clients.erase(it++);
+            }
+        } else {
+            ++it;
+        }
+    }
+}
 
+void ClientManager::sendHttpResponse(int socket_fd) {
+    std::string http_response = 
+        "HTTP/1.1 200 OK\r\n"
+        "Content-Type: text/html\r\n"
+        "Content-Length: 13\r\n"
+        "\r\n"
+        "Hello World!";
+    send(socket_fd, http_response.c_str(), http_response.length(), 0);
+}
 
 void ClientManager::updateActivity(int socket_fd) {
     std::map<int, Client>::iterator it = clients.find(socket_fd);
