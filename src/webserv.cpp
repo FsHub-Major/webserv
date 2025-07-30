@@ -34,32 +34,35 @@ Server * g_server = NULL;
 
 int main(int ac, char *av[]) {
 
+    (void) av;
+    (void)ac;
     try{
 
     std::string config_path;
+    
+    //TODO : handle config parsing
+    // if (ac > 2)
+    //     std::cout << "Usage: webserv [<config_file_path>]" << std::endl;
+    // if (ac == 2)
+    //     config_path = av[1];
 
-    if (ac > 2)
-        std::cout << "Usage: webserv [<config_file_path>]" << std::endl;
-    if (ac == 2)
-        config_path = av[1];
-
-    std::ifstream test_file(config_path.c_str());
-    if (!test_file.is_open()) {
-        std::cerr << "Configuration file not found: " << config_path << "\n";
-        return 1;
-    }
-    test_file.close();
+    // std::ifstream test_file(config_path.c_str());
+    // if (!test_file.is_open()) {
+    //     std::cerr << "Configuration file not found: " << config_path << "\n";
+    //     return 1;
+    // }
+    // test_file.close();
  
-    const int port = load_port(config_path);
+    // const int port = load_port(config_path);
 
-    if (port <= 0 || port > 65535) {
-        std::cerr << "Invalid port loaded: " << port << "\n";
-        return 1;
-    }
-    std::cout << "Using port " << port << " from config: " << config_path << "\n";
+    // if (port <= 0 || port > 65535) {
+    //     std::cerr << "Invalid port loaded: " << port << "\n";
+    //     return 1;
+    // }
+    // std::cout << "Using port " << port << " from config: " << config_path << "\n";
 
     ServerConfig server_config;
-    server_config.port = port;   
+    server_config.port = 8080;   
     server_config.server_name = "localhost";
     server_config.root = "./www";
     server_config.index_files.push_back("index.html");
@@ -67,14 +70,12 @@ int main(int ac, char *av[]) {
     server_config.client_max_body_size = 1024 * 1024;  // 1MB
 
 
-    std::cout << "Initializing sever on port" << std::endl;
-
     Server server(server_config);
     g_server = &server;
 
     if (!server.init())
     {
-        std::cerr << "Failed to init server on port " << port << std::endl;
+        std::cerr << "Failed to init server on port " << server_config.port << std::endl;
         return (1);
     }
 
