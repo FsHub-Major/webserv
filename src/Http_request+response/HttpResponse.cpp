@@ -1,5 +1,6 @@
 #include "HttpResponse.hpp"
 #include "Config.hpp"
+#include "macros.hpp"
 
 // Helper method to get reason phrase from status code
 std::string HttpResponse::getReasonPhraseFromCode(int statusCode)
@@ -40,11 +41,6 @@ void HttpResponse::setReasonPhrase(const std::string& phrase)
     reasonPhrase = phrase;
 }
 
-void HttpResponse::setHttpVersion(const std::string& version)
-{
-    httpVersion = version;
-}
-
 void HttpResponse::setHeader(const std::string& key, const std::string& value)
 {
     headers[key] = value;
@@ -79,11 +75,6 @@ const std::string& HttpResponse::getReasonPhrase() const
     return reasonPhrase;
 }
 
-const std::string& HttpResponse::getHttpVersion() const
-{
-    return httpVersion;
-}
-
 const std::string& HttpResponse::getHeader(const std::string& key) const
 {
     std::map<std::string, std::string>::const_iterator it = headers.find(key);
@@ -111,15 +102,36 @@ void HttpResponse::updateContentLength()
     headers["Content-Length"] = oss.str();
 }
 
-const std::string HttpResponse::createGetResponse(const HttpRequest &request) const
+void HttpResponse::createOkResponse(const HttpRequest &request)
+{
+    updateContentLength();
+    fullResponse = request.getHttpVersion() + " " + "200 " + getReasonPhraseFromCode(200);
+    fullResponse =fullResponse  + "/n" + "Content-Length" + headers["Content-Length"];
+    fullResponse += "\n\n";
+    fullResponse += body;
+}
+
+const std::string HttpResponse::createPostResponse(const HttpRequest &request) const
+{
+
+}
+
+const std::string HttpResponse::createDeleteResponse(const HttpRequest &request) const
+{
+
+}
+
+
+const std::string HttpResponse::createGetResponse(const HttpRequest &request)
 {
     struct stat fileStat;
     int fd;
     std::string path;
+    char *buffer;
 
     if (!request.getUri().find('?'))
     {
-        path = ServerConfig::root + request.getUri();
+        path = request.getRoot() + request.getUri();
         path.insert(path.begin(), '.');
         if (stat(path.c_str(), &fileStat) == 0)
         {
@@ -128,14 +140,20 @@ const std::string HttpResponse::createGetResponse(const HttpRequest &request) co
                 fd = open(path.c_str(), O_RDONLY);
                 if (fd > 0)
                 {
-
+                    while (read(fd, buffer, BUFF_SIZE) > 0)
+                        body += buffer;
+                    createOkResponse(request);
+                    close(fd);
                 }
             }
+            else
+                createErrorResponse(request, HTTP_FORBIDDEN);
         }
+        else
+            createErrorResponse(request, HTTP_NOT_FOUND);
     }
 
 }
-
 
 std::string HttpResponse::createResponse(const HttpRequest &request)
 {

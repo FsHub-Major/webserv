@@ -6,7 +6,6 @@
 class HttpResponse
 {
 private:
-    std::string httpVersion;
     int statusCode;
     std::string reasonPhrase;
     std::map<std::string, std::string> headers;
@@ -18,7 +17,6 @@ public:
     // Setters
     void setStatusCode(int code);
     void setReasonPhrase(const std::string& phrase);
-    void setHttpVersion(const std::string& version);
     void setHeader(const std::string& key, const std::string& value);
     void setBody(const std::string& body);
     void setContentType(const std::string& contentType);
@@ -27,7 +25,6 @@ public:
     // Getters
     int getStatusCode() const;
     const std::string& getReasonPhrase() const;
-    const std::string& getHttpVersion() const;
     const std::string& getHeader(const std::string& key) const;
     const std::string& getBody() const;
     const std::map<std::string, std::string>& getHeaders() const;
@@ -40,10 +37,9 @@ public:
     // Method to automatically set Content-Length based on body
     void updateContentLength();
     private:
-        void createOkResponse(const HttpRequest &request) const;
-        void createNotFoundResponse(const HttpRequest &request) const;
-        void createErrorResponse(const HttpRequest &request) const;
-        const std::string createGetResponse(const HttpRequest &request) const;
+        void createOkResponse(const HttpRequest &request);
+        void createErrorResponse(const HttpRequest &request, int errorCode) const;
+        const std::string createGetResponse(const HttpRequest &request);
         const std::string createPostResponse(const HttpRequest &request) const;
         const std::string createDeleteResponse(const HttpRequest &request) const;
         const std::string createUnknowResponse(const HttpRequest &request)const ;
