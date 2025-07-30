@@ -16,7 +16,6 @@ class Server {
         ClientManager clients;
         sockaddr_in address ;
 
-        int port;
         int server_fd;
         bool is_running;
         bool is_init;
