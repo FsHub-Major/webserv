@@ -7,11 +7,10 @@
 Server::Server(const ServerConfig & config)
         : config(config), clients(), server_fd(-1) ,is_running(false), is_init(false)
 {
-    port = config.port;
     std::memset(&address, 0 , sizeof(address));
     address.sin_family = AF_INET;
     address.sin_addr.s_addr = INADDR_ANY;
-    address.sin_port = htons(port);
+    address.sin_port = htons(config.port);
 
 }
 
@@ -45,7 +44,7 @@ bool Server::init()
         return (false);
     } 
     is_init = true;
-    std::cout << "Server listening on port " << port << "...\n";
+    std::cout << "Server listening on port " << config.port << "...\n";
     return (true);
 }
 
@@ -68,8 +67,8 @@ void Server::run() {
         return;
     }
     is_running = true;
-    std::cout << "Server running on port " << port << "..." << std::endl;
 
+    std::cout << "Server running on port " << config.port << std::endl;
     while (is_running)
     {
         fd_set readfds;
@@ -147,7 +146,7 @@ void Server::cleanup()
 }
 
 int Server::getPort() const {
-    return port;
+    return config.port;
 }
 
 int Server::getServerFd() const {
