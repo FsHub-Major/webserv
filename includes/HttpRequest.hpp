@@ -5,45 +5,46 @@ class HttpRequest
 {
 private:
     // Request line components
-    std::string method;          // GET, POST, PUT, DELETE, etc.
-    std::string uri;            // /path/to/resource
-    std::string httpVersion;    // HTTP/1.1
+   std::string                         method;          // GET, POST, PUT, DELETE, etc.
+   std::string                         uri;            // /path/to/resource
+   std::string                         httpVersion;    // HTTP/1.1
+   std::string                         root;           //path to root server
 
     // Headers
-    std::map<std::string, std::string> headers;
-    std::string rawHeaders;
+   std::map<std::string, std::string>  headers;
     
     // Body (for POST requests)
-    std::string body;
+   std::string                         body;
     
     // Query parameters (from URL)
-    std::map<std::string, std::string> queryParams;
+   std::map<std::string, std::string>  queryParams;
     
     // Additional parsed data
-    std::string host;
-    int contentLength;
-    std::string contentType;
+   std::string                         host;
+   int contentLength;
+   std::string                         contentType;
     
     // Raw request data
-    std::string rawRequest;
+   std::string rawRequest;
  public:
     bool    isQuery;
     // Constructor
-    HttpRequest();
-    HttpRequest(const std::string& rawRequest);
+   HttpRequest();
     
     // Main parsing function
-    bool parseRequest(const std::string& rawRequest);
+   bool                                      parseRequest(const std::string& rawRequest, 
+                                                const std::string root);
     
     // Utility functions
-    void printRequest() const;
+   void                                      printRequest() const;
 
     //getters
-    const std::string &getMethod() const;
-    const std::string &getUri() const;
-    const std::string &getHttpVersion() const;
-    const std::map<std::string, std::string>& getHeaders() const;
-    const std::string &getHeader(const std::string& key) const;
+   const std::string                         &getMethod() const;
+   const std::string                         &getUri() const;
+   const std::string                         &getHttpVersion() const;
+   const std::map<std::string,std::string>   &getHeaders() const;
+   const std::string                         &getHeader(const std::string& key) const;
+   const std::string                         &getRoot() const;
  private:
-    void  parseQuery();
+   void  parseQuery();
 };

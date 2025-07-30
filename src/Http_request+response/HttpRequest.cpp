@@ -2,10 +2,6 @@
 #include "ext_libs.hpp"
 
 
-HttpRequest::HttpRequest(const std::string &request)
-{
-    parseRequest(request);
-}
 
 HttpRequest::HttpRequest(void)
 {
@@ -14,16 +10,26 @@ HttpRequest::HttpRequest(void)
 
 void HttpRequest::parseQuery(void)
 {
+    vector<std::string> query;
+    std::string key, val;
 
+    query = split(uri.substr(uri.find_first_of('?') + 1), "&");
+    for(int i = 0; i < query.size(); i++)
+    {
+        key = query[i].substr(0, query[i].find_first_of('='));
+        val = query[i].substr(query[i].find_first_of('=') + 1);
+        queryParams[key] = val;
+    }
 }
 
-bool HttpRequest::parseRequest(const std::string &request)
+bool HttpRequest::parseRequest(const std::string &request, const std::string root)
 {
     std::string line;
     std::string key;
     std::string val;
 
     rawRequest = request;
+    this->root = root;
     std::istringstream req_stream(request);
     req_stream >> method >> uri >> httpVersion;
 
@@ -62,6 +68,18 @@ void HttpRequest::printRequest(void) const
         for (std::map<std::string, std::string>::const_iterator it = headers.begin(); 
              it != headers.end(); ++it) {
             std::cout << "  " << it->first << ": " << it->second << std::endl;
+        }
+    }
+    std::cout << std::endl;
+    
+    // Print query parameters
+    std::cout << "Query Parameters:" << std::endl;
+    if (queryParams.empty()) {
+        std::cout << "  (no query parameters)" << std::endl;
+    } else {
+        for (std::map<std::string, std::string>::const_iterator it = queryParams.begin(); 
+             it != queryParams.end(); ++it) {
+            std::cout << "  " << it->first << " = " << it->second << std::endl;
         }
     }
     std::cout << std::endl;
@@ -108,4 +126,9 @@ const std::string& HttpRequest::getHeader(const std::string& key) const
     if (it != headers.end())
         return (it->second);
     return (empty);
+}
+
+const std::string &HttpRequest::getRoot() const
+{
+    return (root);
 }
