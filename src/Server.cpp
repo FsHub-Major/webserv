@@ -68,6 +68,36 @@ void Server::run() {
         return;
     }
     is_running = true;
+    std::cout << "Server running on port " << port << "..." << std::endl;
+
+    while (is_running)
+    {
+        fd_set readfds;
+        int max_fd = server_fd;
+
+        setupSelectFds(&readfds, &max_fd);
+
+        struct timeval timeout;
+        timeout.tv_sec = 5;
+        timeout.tv_usec = 0;
+
+        int activity = select(max_fd + 1, &readfds, NULL, NULL, &timeout);
+
+        if (activity < 0)
+        {
+            if (is_running)
+            {
+                perror("select failed");
+            }
+            break;
+        }
+
+        if (FD_ISSET(server_fd, &readfds))
+            handleNewConnection();
+
+        processRequest(&readfds);
+    }
+    std::cout << "Server stopped : " << config.server_name << std::endl;
 }
 
 bool Server::handleNewConnection()
@@ -79,7 +109,7 @@ bool Server::handleNewConnection()
     socklen_t client_len = sizeof(client_addr);
 
     int new_socket = accept(server_fd, (struct sockaddr*) &client_addr, &client_len);
-    if (!new_socket < 0)
+    if (new_socket < 0)
     {
         perror("accept failer");
         return (false);
