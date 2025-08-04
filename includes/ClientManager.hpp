@@ -25,13 +25,14 @@ public:
     ~ClientManager();
     
     bool addClient(int socket_fd, const struct sockaddr_in& addr);
-    void removeClient(int socket_fd);
+    void removeClient(int socket_fd, fd_set * readfds);
     
     void updateActivity(int socket_fd);
-    void checkTimeouts();
+    void checkTimeouts(fd_set *readfds);
     
     void setupClientFds(fd_set* readfds, int* max_fd);
-    void processClientRequest(const fd_set* readfds);
+    void processClientRequest(fd_set* readfds);
+    void cleanupInvalidFds(fd_set * readfds); // to delete, maybe 
     
     int getClientCount() const;
     bool isFull() const;

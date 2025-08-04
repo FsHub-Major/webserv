@@ -37,13 +37,18 @@ void client_thread(int client_id) {
             std::lock_guard<std::mutex> lock(output_mutex);
             std::cout << "Client " << client_id << " received: " << buffer << "\n";
         } 
-        sleep(2);  // Keep connection alive briefly
+        sleep(30);  // Keep connection alive briefly
+
     }
-    close(sock);
     {
-        std::lock_guard<std::mutex> lock(output_mutex);
-        std::cout << "Client " << client_id << " disconnected\n";
+        std::lock_guard<std::mutex> lock(output_mutex); 
+        std::cout << "Client " << client_id << " finished \n";
     }
+    // close(sock);
+    // {
+    //     std::lock_guard<std::mutex> lock(output_mutex);
+    //     std::cout << "Client " << client_id << " disconnected\n";
+    // }
 }
 
 int main() {

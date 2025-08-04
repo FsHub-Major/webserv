@@ -8,6 +8,9 @@
 #include <unistd.h>
 #include <arpa/inet.h>
 
+// to delete, maybe not 
+#include <fcntl.h>
+
 ClientManager::ClientManager() {
     
 }
@@ -25,9 +28,20 @@ void ClientManager::setupClientFds(fd_set* readfds, int* max_fd)
     for (std::map<int, Client>::iterator it = clients.begin(); it != clients.end(); ++it)
     {
         int socket_fd = it->first;
-        FD_SET(socket_fd, readfds);
-        if (socket_fd > *max_fd) {
-            *max_fd = socket_fd;
+
+        // validate if fd is still valid
+        if (fcntl(socket_fd, F_GETFL) == -1 && errno ==  EBADF)
+        {
+            printf("Removing invalid fd %d from setupClientFds\n", socket_fd);
+            removeClient(socket_fd, readfds);
+            it = clients.begin();
+        } 
+        else 
+        {
+            FD_SET(socket_fd, readfds);
+            if (socket_fd > *max_fd) {
+                *max_fd = socket_fd;
+            }
         }
     }
 }
@@ -55,7 +69,7 @@ bool ClientManager::addClient(int socket_fd, const struct sockaddr_in& addr) {
 }
 
 
-void ClientManager::removeClient(int socket_fd) {
+void ClientManager::removeClient(int socket_fd, fd_set * readfds) {
     std::map<int, Client>::iterator it = clients.find(socket_fd);
     if (it != clients.end()) {
         printf("Client disconnected: socket fd %d, IP %s, port %d (remaining: %d)\n",
@@ -69,6 +83,21 @@ void ClientManager::removeClient(int socket_fd) {
     }
 }
 
+void ClientManager::cleanupInvalidFds(fd_set * readfds) {
+    std::map<int, Client>::iterator it = clients.begin();
+    
+    while (it != clients.end()) {
+        int socket_fd = it->first;
+        // Test if fd is valid by trying fcntl
+        if (fcntl(socket_fd, F_GETFL) == -1 && errno == EBADF) {
+            printf("Removing invalid fd: %d\n", socket_fd);
+            removeClient(it->first, readfds);
+        } else {
+            ++it;
+        }
+    }
+}
+
 
 int ClientManager::getClientCount() const {
     return (clients.size()); // cast to int ?  
@@ -78,7 +107,7 @@ bool ClientManager::isFull() const {
     return clients.size() >= MAX_CLIENTS;
 }
 
-void ClientManager::processClientRequest(const fd_set* readfds) {
+void ClientManager::processClientRequest(fd_set* readfds) {
     std::map<int, Client>::iterator it = clients.begin();
     
     while (it != clients.end()) {
@@ -89,9 +118,8 @@ void ClientManager::processClientRequest(const fd_set* readfds) {
             
             if (valread == 0) {
                 // Connection closed by client
-                printf("Client disconnected: socket fd %d\n", socket_fd);
-                close(socket_fd);
-                clients.erase(it++);
+                printf("Client disconnected: socket fd here %d\n", socket_fd);
+                removeClient(it->first, readfds); 
             } else if (valread > 0) {
                 // Process the request and send response
                 buffer[valread] = '\0';
@@ -101,8 +129,7 @@ void ClientManager::processClientRequest(const fd_set* readfds) {
             } else {
                 // Read error
                 perror("read");
-                close(socket_fd);
-                clients.erase(it++);
+                removeClient(it->first, readfds);
             }
         } else {
             ++it;
@@ -128,7 +155,7 @@ void ClientManager::updateActivity(int socket_fd) {
 }
 
 
-void ClientManager::checkTimeouts()
+void ClientManager::checkTimeouts(fd_set *readfds)
 {
     time_t current_time = time(NULL);
     std::map<int, Client>::iterator it = clients.begin();
@@ -137,8 +164,9 @@ void ClientManager::checkTimeouts()
         if (current_time - it->second.last_activity > CLIENT_TIMEOUT)
         {
             printf("Client timeout: socket fd %d\n", it->first);
-            close(it->first);
-            clients.erase(it++); // post increament
+            int socket_fd = it->first;
+            ++it;
+            removeClient(socket_fd, readfds);
         }
         else{
             ++it;
@@ -146,3 +174,4 @@ void ClientManager::checkTimeouts()
 
     }
 }
+

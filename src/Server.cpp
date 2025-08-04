@@ -4,14 +4,16 @@
 #include "macros.hpp"
 
 
+#include "debug.hpp"
+
 Server::Server(const ServerConfig & config)
         : config(config), clients(), server_fd(-1) ,is_running(false), is_init(false)
 {
     std::memset(&address, 0 , sizeof(address));
     address.sin_family = AF_INET;
-    address.sin_addr.s_addr = INADDR_ANY;
+    address.sin_addr.s_addr = inet_addr("127.0.0.1"); // localhost
+    // address.sin_addr.s_addr = INADDR_ANY;
     address.sin_port = htons(config.port);
-
 }
 
 Server::~Server()
@@ -84,17 +86,30 @@ void Server::run() {
 
         if (activity < 0)
         {
-            if (is_running)
+            if (errno == EBADF)
+            {
+                // check avaible fds to see if deleted 
+                Debug::inspectReadfds(&readfds, max_fd, server_fd);
+                clients.cleanupInvalidFds(&readfds);
+                continue;
+            }
+            else if (errno == EINTR)
+            {
+                continue;
+            }
+            else if (is_running)
             {
                 perror("select failed");
+                break; // should exit 
             }
             break;
         }
-
-        if (FD_ISSET(server_fd, &readfds))
-            handleNewConnection();
-
-        processRequest(&readfds);
+        if (activity > 0)
+        {
+            if (FD_ISSET(server_fd, &readfds))
+                handleNewConnection();
+            processRequest(&readfds);
+        }
     }
     std::cout << "Server stopped : " << config.server_name << std::endl;
 }
@@ -130,7 +145,7 @@ void Server::processRequest(fd_set* readfds)
     if (!readfds) return ;
 
     clients.processClientRequest(readfds);
-    clients.checkTimeouts();
+    // clients.checkTimeouts();
 };
 
 
