@@ -38,9 +38,9 @@ public:
     void updateContentLength();
     private:
         void createOkResponse(const HttpRequest &request);
-        void createErrorResponse(const HttpRequest &request, int errorCode) const;
-        const std::string createGetResponse(const HttpRequest &request);
-        const std::string createPostResponse(const HttpRequest &request) const;
-        const std::string createDeleteResponse(const HttpRequest &request) const;
-        const std::string createUnknowResponse(const HttpRequest &request)const ;
-};
+        void createErrorResponse(const HttpRequest &request, int errorCode);
+        std::string createGetResponse(const HttpRequest &request);
+        std::string createPostResponse(const HttpRequest &request);
+        std::string createDeleteResponse(const HttpRequest &request);
+        std::string createUnknowResponse(const HttpRequest &request);
+}
