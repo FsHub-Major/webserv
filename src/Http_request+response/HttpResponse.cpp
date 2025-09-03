@@ -104,16 +104,30 @@ void HttpResponse::updateContentLength()
 
 void HttpResponse::createOkResponse(const HttpRequest &request)
 {
-    updateContentLength();
-    fullResponse = request.getHttpVersion() + " " + "200 " + getReasonPhraseFromCode(200);
-    fullResponse =fullResponse  + "/n" + "Content-Length" + headers["Content-Length"];
-    fullResponse += "\n\n";
-    fullResponse += body;
+    if (request.getMethod() == "GET")
+    {
+        updateContentLength();
+        fullResponse = request.getHttpVersion() + " " + "200 " + getReasonPhraseFromCode(200);
+        fullResponse =fullResponse  + "/n" + "Content-Length" + headers["Content-Length"];
+        fullResponse += "\n\n";
+        fullResponse += body;
+    }
+    else if (request.getMethod() == "POST")
 }
 
 const std::string HttpResponse::createPostResponse(const HttpRequest &request) const
 {
+    std::string path;
+    int fd;
 
+    path = request.getRoot() + request.getUri();
+    path.insert(path.begin(), '.');
+    if (access(path.c_str(), F_OK) == 0 && access(path.c_str(), W_OK) < 0)
+        createErrorResponse(request, HTTP_FORBIDDEN);
+    fd = open(path.c_str(), O_CREAT | O_TRUNC | O_WRONLY);
+    if (fd < 0)
+        createErrorResponse(request, HTTP_INTERNAL_SERVER_ERROR);
+    
 }
 
 const std::string HttpResponse::createDeleteResponse(const HttpRequest &request) const
