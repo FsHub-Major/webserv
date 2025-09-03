@@ -104,18 +104,34 @@ void HttpResponse::updateContentLength()
 
 void HttpResponse::createOkResponse(const HttpRequest &request)
 {
+    updateContentLength();
+
     if (request.getMethod() == "GET")
     {
-        updateContentLength();
-        fullResponse = request.getHttpVersion() + " " + "200 " + getReasonPhraseFromCode(200);
-        fullResponse =fullResponse  + "/n" + "Content-Length" + headers["Content-Length"];
-        fullResponse += "\n\n";
+        fullResponse = request.getHttpVersion() + " 200 " + getReasonPhraseFromCode(200) + "\r\n";
+        fullResponse += "Content-Length: " + headers["Content-Length"] + "\r\n";
+        if (headers.find("Content-Type") != headers.end())
+            fullResponse += "Content-Type: " + headers["Content-Type"] + "\r\n";
+        fullResponse += "Connection: close\r\n";
+        fullResponse += "\r\n"; // blank line before body
         fullResponse += body;
     }
-    else if (request.getMethod() == "POST")
 }
 
-const std::string HttpResponse::createPostResponse(const HttpRequest &request) const
+void HttpResponse::createErrorResponse(const HttpRequest &request, int errorCode)
+{
+    setStatusCode(errorCode);
+    body = "<html><body><h1>" + std::to_string(errorCode) + " " + getReasonPhraseFromCode(errorCode) + "</h1></body></html>";
+    updateContentLength();
+    fullResponse = request.getHttpVersion() + " " + std::to_string(errorCode) + " " + getReasonPhraseFromCode(errorCode) + "\r\n";
+    fullResponse += "Content-Length: " + headers["Content-Length"] + "\r\n";
+    fullResponse += "Content-Type: text/html\r\n";
+    fullResponse += "Connection: close\r\n";
+    fullResponse += "\r\n";
+    fullResponse += body;
+}
+
+std::string HttpResponse::createPostResponse(const HttpRequest &request)
 {
     std::string path;
     int fd;
@@ -127,16 +143,17 @@ const std::string HttpResponse::createPostResponse(const HttpRequest &request) c
     fd = open(path.c_str(), O_CREAT | O_TRUNC | O_WRONLY);
     if (fd < 0)
         createErrorResponse(request, HTTP_INTERNAL_SERVER_ERROR);
-    
+    return (fullResponse);
 }
 
-const std::string HttpResponse::createDeleteResponse(const HttpRequest &request) const
+std::string HttpResponse::createDeleteResponse(const HttpRequest &request)
 {
 
+    return (fullResponse);
 }
 
 
-const std::string HttpResponse::createGetResponse(const HttpRequest &request)
+std::string HttpResponse::createGetResponse(const HttpRequest &request)
 {
     struct stat fileStat;
     int fd;
@@ -166,7 +183,7 @@ const std::string HttpResponse::createGetResponse(const HttpRequest &request)
         else
             createErrorResponse(request, HTTP_NOT_FOUND);
     }
-
+    return (fullResponse);
 }
 
 std::string HttpResponse::createResponse(const HttpRequest &request)
