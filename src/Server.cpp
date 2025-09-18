@@ -33,12 +33,20 @@ bool Server::init()
         return (false);
     }
 
+    // Add SO_REUSEADDR to prevent "Address already in use" errors
+    int opt = 1;
+    if (setsockopt(server_fd, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt)) < 0) {
+        perror("setsockopt failed");
+        close(server_fd);
+        return false;
+    }
 
     if (bind(server_fd, reinterpret_cast<sockaddr*>(&address), sizeof(address)) == -1) {
         perror("bind");
         close(server_fd);
         return (false);
     }
+
     // 128 backlog queue (pending clients) , not MAX_CLIENTS of concurrent clients
     if (listen(server_fd, 128) == -1) {
         perror("listen");
