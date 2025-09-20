@@ -4,6 +4,11 @@
 **/*.o
 webserv
 .vscode/
+
+
+#tests 
+spawnTest
+
 # Compiled Object files
 *.slo
 *.lo
