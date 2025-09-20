@@ -1,5 +1,3 @@
-
-
 #include "ClientManager.hpp"
 #include "webserv.hpp"
 #include "macros.hpp"
@@ -33,7 +31,7 @@ void ClientManager::setupClientFds(fd_set* readfds, int* max_fd)
         if (fcntl(socket_fd, F_GETFL) == -1 && errno ==  EBADF)
         {
             printf("Removing invalid fd %d from setupClientFds\n", socket_fd);
-            removeClient(socket_fd, readfds);
+            removeClient(socket_fd);
             it = clients.begin();
         } 
         else 
@@ -69,7 +67,7 @@ bool ClientManager::addClient(int socket_fd, const struct sockaddr_in& addr) {
 }
 
 
-void ClientManager::removeClient(int socket_fd, fd_set * readfds) {
+void ClientManager::removeClient(int socket_fd) {
     std::map<int, Client>::iterator it = clients.find(socket_fd);
     if (it != clients.end()) {
         printf("Client disconnected: socket fd %d, IP %s, port %d (remaining: %d)\n",
@@ -83,15 +81,19 @@ void ClientManager::removeClient(int socket_fd, fd_set * readfds) {
     }
 }
 
-void ClientManager::cleanupInvalidFds(fd_set * readfds) {
+void ClientManager::cleanupInvalidFds() {     
+    
     std::map<int, Client>::iterator it = clients.begin();
     
     while (it != clients.end()) {
         int socket_fd = it->first;
-        // Test if fd is valid by trying fcntl
-        if (fcntl(socket_fd, F_GETFL) == -1 && errno == EBADF) {
-            printf("Removing invalid fd: %d\n", socket_fd);
-            removeClient(it->first, readfds);
+        
+        int error = 0;
+        socklen_t len = sizeof(error);
+        if (getsockopt(socket_fd, SOL_SOCKET, SO_ERROR, &error, &len) < 0) {
+            printf("Removing invalid fd: %d (error: %d)\n", socket_fd, errno);
+            close(socket_fd);
+            clients.erase(it++);
         } else {
             ++it;
         }
@@ -119,7 +121,7 @@ void ClientManager::processClientRequest(fd_set* readfds) {
             if (valread == 0) {
                 // Connection closed by client
                 printf("Client disconnected: socket fd here %d\n", socket_fd);
-                removeClient(it->first, readfds); 
+                removeClient(it->first); 
             } else if (valread > 0) {
                 // Process the request and send response
                 buffer[valread] = '\0';
@@ -129,7 +131,7 @@ void ClientManager::processClientRequest(fd_set* readfds) {
             } else {
                 // Read error
                 perror("read");
-                removeClient(it->first, readfds);
+                removeClient(it->first);
             }
         } else {
             ++it;
@@ -166,7 +168,7 @@ void ClientManager::checkTimeouts(fd_set *readfds)
             printf("Client timeout: socket fd %d\n", it->first);
             int socket_fd = it->first;
             ++it;
-            removeClient(socket_fd, readfds);
+            removeClient(socket_fd);
         }
         else{
             ++it;
