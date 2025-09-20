@@ -2,9 +2,8 @@
 
 #include "Server.hpp"
 #include "macros.hpp"
-
-
 #include "debug.hpp"
+#include <poll.h>
 
 Server::Server(const ServerConfig & config)
         : config(config), clients(), server_fd(-1) ,is_running(false), is_init(false)
@@ -59,16 +58,24 @@ bool Server::init()
 }
 
 
-void Server::setupSelectFds(fd_set* readfds, int* max_fd)
+void Server::buildPollFds()
 {
-    if (!readfds || !max_fd)
-        return ;
-    
-    FD_SET(server_fd, readfds);
-    if (server_fd > *max_fd){
-        *max_fd = server_fd;
+    poll_fds.clear();
+    struct pollfd pfd;
+    pfd.fd = server_fd;
+    pfd.events = POLLIN; // watch for incoming connections
+    pfd.revents = 0;
+    poll_fds.push_back(pfd);
+
+    // add client sockets
+    for (std::map<int, Client>::const_iterator it = clients.clientsBegin(); it != clients.clientsEnd(); ++it)
+    {
+        struct pollfd cfd;
+        cfd.fd = it->first;
+        cfd.events = POLLIN; // only read for now
+        cfd.revents = 0;
+        poll_fds.push_back(cfd);
     }
-    clients.setupClientFds(readfds, max_fd);
 }
 
 void Server::run() {
@@ -81,43 +88,24 @@ void Server::run() {
     std::cout << "Server running on port " << config.port << std::endl;
     while (is_running)
     {
-        fd_set readfds;
-        int max_fd = server_fd;
+        buildPollFds();
 
-        setupSelectFds(&readfds, &max_fd);
-
-        struct timeval timeout;
-        timeout.tv_sec = 5;
-        timeout.tv_usec = 0;
-
-        int activity = select(max_fd + 1, &readfds, NULL, NULL, &timeout);
-
-        if (activity < 0)
+        // poll timeout in milliseconds (5s)
+        int ret = poll(&poll_fds[0], poll_fds.size(), 5000);
+        if (ret < 0)
         {
-            if (errno == EBADF)
-            {
-                // check avaible fds to see if deleted 
-                Debug::inspectReadfds(&readfds, max_fd, server_fd);
-                clients.cleanupInvalidFds();
-                continue;
-            }
-            else if (errno == EINTR)
-            {
-                continue;
-            }
-            else if (is_running)
-            {
-                perror("select failed");
-                break; // should exit 
-            }
+            if (errno == EINTR)
+                continue; // interrupted by signal
+            perror("poll failed");
             break;
         }
-        if (activity > 0)
+        if (ret == 0)
         {
-            if (FD_ISSET(server_fd, &readfds))
-                handleNewConnection();
-            processRequest(&readfds);
+            // timeout: still do timeout checks
+            clients.checkTimeouts();
+            continue;
         }
+        processReadyFds();
     }
     std::cout << "Server stopped : " << config.server_name << std::endl;
 }
@@ -148,13 +136,31 @@ bool Server::handleNewConnection()
     return (true); 
 }
 
-void Server::processRequest(fd_set* readfds)
+void Server::processReadyFds()
 {
-    if (!readfds) return ;
-
-    clients.processClientRequest(readfds);
-    // clients.checkTimeouts();
-};
+    // index 0 is server fd
+    if (poll_fds.empty())
+        return;
+    if (poll_fds[0].revents & POLLIN)
+    {
+        handleNewConnection();
+    }
+    // collect readable client fds
+    std::vector<int> readable;
+    for (size_t i = 1; i < poll_fds.size(); ++i)
+    {
+        if (poll_fds[i].revents & (POLLERR | POLLHUP | POLLNVAL))
+        {
+            clients.removeClient(poll_fds[i].fd);
+            continue;
+        }
+        if (poll_fds[i].revents & POLLIN)
+            readable.push_back(poll_fds[i].fd);
+    }
+    if (!readable.empty())
+        clients.processClientRequestPoll(readable); // new API
+    clients.checkTimeouts();
+}
 
 
 void Server::cleanup()

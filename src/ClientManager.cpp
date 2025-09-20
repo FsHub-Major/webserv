@@ -10,7 +10,8 @@
 #include <fcntl.h>
 
 ClientManager::ClientManager() {
-    
+
+    std::cout << " ClientManager Constructor called" << std::endl;
 }
 
 ClientManager::~ClientManager() {
@@ -18,6 +19,7 @@ ClientManager::~ClientManager() {
         close(it->first); 
     }
     clients.clear();
+    std::cout << " ~ClientManager called" << std::endl;
 }
 
 
@@ -137,6 +139,30 @@ void ClientManager::processClientRequest(fd_set* readfds) {
             }
         } else {
             ++it;
+        }
+    }
+}
+
+// poll variant: readable_fds are those with POLLIN ready
+void ClientManager::processClientRequestPoll(const std::vector<int>& readable_fds) {
+    for (size_t i = 0; i < readable_fds.size(); ++i) {
+        int socket_fd = readable_fds[i];
+        std::map<int, Client>::iterator it = clients.find(socket_fd);
+        if (it == clients.end())
+            continue; // might have been removed already
+        char buffer[1024] = {0};
+        int valread = read(socket_fd, buffer, sizeof(buffer));
+        if (valread == 0) {
+            // client closed
+            removeClient(socket_fd);
+            continue;
+        } else if (valread > 0) {
+            buffer[valread] = '\0';
+            sendHttpResponse(socket_fd);
+            updateActivity(socket_fd);
+        } else {
+            perror("read");
+            removeClient(socket_fd);
         }
     }
 }

@@ -6,6 +6,7 @@
 #include "ext_libs.hpp"
 #include "macros.hpp"
 #include <map>
+#include <vector>
 
 struct Client {
     int socket_fd;
@@ -30,9 +31,17 @@ public:
     void updateActivity(int socket_fd);
     void checkTimeouts();
     
+    // legacy select helpers (to be removed after migration)
     void setupClientFds(fd_set* readfds, int* max_fd);
     void processClientRequest(fd_set* readfds);
     void cleanupInvalidFds();
+
+    // poll based processing
+    void processClientRequestPoll(const std::vector<int>& readable_fds);
+
+    // iteration access for building pollfd list
+    std::map<int, Client>::const_iterator clientsBegin() const { return clients.begin(); }
+    std::map<int, Client>::const_iterator clientsEnd() const { return clients.end(); }
     
     int getClientCount() const;
     bool isFull() const;

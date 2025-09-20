@@ -7,6 +7,8 @@
 #include "ClientManager.hpp"
 #include <sys/socket.h>
 #include <netinet/in.h>
+#include <poll.h>
+#include <vector>
 #include <iostream>
 
 class Server {
@@ -17,8 +19,10 @@ class Server {
         sockaddr_in address ;
 
         int server_fd;
-        bool is_running;
-        bool is_init;
+    bool is_running;
+    bool is_init;
+    // poll(2) related container rebuilt each loop for clarity
+    std::vector< struct pollfd > poll_fds;
 
     public:
         Server(const ServerConfig &config);
@@ -30,9 +34,10 @@ class Server {
         void stop();
 
 
-        void setupSelectFds(fd_set* readfds, int* max_fd);
-        bool handleNewConnection();
-        void processRequest(fd_set * readfds);
+    // poll-based helpers
+    bool handleNewConnection();
+    void buildPollFds();
+    void processReadyFds();
 
         int getPort() const;
         int getServerFd() const;
