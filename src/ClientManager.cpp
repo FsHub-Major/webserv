@@ -121,7 +121,9 @@ void ClientManager::processClientRequest(fd_set* readfds) {
             if (valread == 0) {
                 // Connection closed by client
                 printf("Client disconnected: socket fd here %d\n", socket_fd);
-                removeClient(it->first); 
+                //removeClient(it->first); this is sigfault when "it" no longer exist 
+                it = clients.erase(it); // erase and get next iterator 
+
             } else if (valread > 0) {
                 // Process the request and send response
                 buffer[valread] = '\0';
@@ -131,7 +133,7 @@ void ClientManager::processClientRequest(fd_set* readfds) {
             } else {
                 // Read error
                 perror("read");
-                removeClient(it->first);
+                it = clients.erase(it); // erase and get next iterator 
             }
         } else {
             ++it;
