@@ -105,20 +105,50 @@ void HttpResponse::updateContentLength()
 void HttpResponse::createOkResponse(const HttpRequest &request)
 {
     updateContentLength();
-    fullResponse = request.getHttpVersion() + " " + "200 " + getReasonPhraseFromCode(200);
-    fullResponse =fullResponse  + "/n" + "Content-Length" + headers["Content-Length"];
-    fullResponse += "\n\n";
+    // Build proper HTTP/1.1 response with CRLF and headers
+    fullResponse = request.getHttpVersion() + " 200 " + getReasonPhraseFromCode(200) + "\r\n";
+    // Content-Length is required for persistent connections
+    fullResponse += "Content-Length: " + headers["Content-Length"] + "\r\n";
+    // Add Content-Type if provided
+    if (headers.find("Content-Type") != headers.end())
+        fullResponse += "Content-Type: " + headers["Content-Type"] + "\r\n";
+    else
+        fullResponse += "Content-Type: text/plain; charset=UTF-8\r\n";
+    // Close by default for simplicity
+    fullResponse += "Connection: close\r\n";
+    // End of headers
+    fullResponse += "\r\n";
     fullResponse += body;
 }
 
 const std::string HttpResponse::createPostResponse(const HttpRequest &request) const
 {
-
+    (void)request; // suppress unused parameter for now
+    // Minimal 501 Not Implemented response for POST until implemented
+    std::ostringstream oss;
+    const std::string reason = getReasonPhraseFromCode(HTTP_NOT_IMPLEMENTED);
+    oss << "HTTP/1.1 " << HTTP_NOT_IMPLEMENTED << ' ' << reason << "\r\n";
+    const std::string msg = "POST not implemented";
+    oss << "Content-Type: text/plain; charset=UTF-8\r\n";
+    oss << "Content-Length: " << msg.size() << "\r\n";
+    oss << "Connection: close\r\n\r\n";
+    oss << msg;
+    return oss.str();
 }
 
 const std::string HttpResponse::createDeleteResponse(const HttpRequest &request) const
 {
-
+    (void)request; // suppress unused parameter for now
+    // Minimal 501 Not Implemented response for DELETE until implemented
+    std::ostringstream oss;
+    const std::string reason = getReasonPhraseFromCode(HTTP_NOT_IMPLEMENTED);
+    oss << "HTTP/1.1 " << HTTP_NOT_IMPLEMENTED << ' ' << reason << "\r\n";
+    const std::string msg = "DELETE not implemented";
+    oss << "Content-Type: text/plain; charset=UTF-8\r\n";
+    oss << "Content-Length: " << msg.size() << "\r\n";
+    oss << "Connection: close\r\n\r\n";
+    oss << msg;
+    return oss.str();
 }
 
 
@@ -127,32 +157,91 @@ const std::string HttpResponse::createGetResponse(const HttpRequest &request)
     struct stat fileStat;
     int fd;
     std::string path;
-    char *buffer;
+    char buffer[BUFF_SIZE];
+    ssize_t bytes_read = 0;
 
-    if (!request.getUri().find('?'))
+    // normalize path and strip query string if present
+    std::string uri = request.getUri();
+    std::string::size_type qpos = uri.find('?');
+    if (qpos != std::string::npos)
+        uri = uri.substr(0, qpos);
+
+    path = request.getRoot() + uri;
+    // ensure relative path by prepending '.'
+    path.insert(path.begin(), '.');
+
+    if (stat(path.c_str(), &fileStat) == 0)
     {
-        path = request.getRoot() + request.getUri();
-        path.insert(path.begin(), '.');
-        if (stat(path.c_str(), &fileStat) == 0)
+        if (access(path.c_str(), R_OK) == 0)
         {
-            if (access(path.c_str(), R_OK) == 0)
+            fd = open(path.c_str(), O_RDONLY);
+            if (fd >= 0)
             {
-                fd = open(path.c_str(), O_RDONLY);
-                if (fd > 0)
+                body.clear();
+                while ((bytes_read = read(fd, buffer, BUFF_SIZE)) > 0)
+                    body.append(buffer, bytes_read);
+                if (bytes_read < 0)
                 {
-                    while (read(fd, buffer, BUFF_SIZE) > 0)
-                        body += buffer;
-                    createOkResponse(request);
                     close(fd);
+                    std::ostringstream oss;
+                    const std::string reason = getReasonPhraseFromCode(HTTP_INTERNAL_SERVER_ERROR);
+                    const std::string msg = "Read error";
+                    oss << request.getHttpVersion() << ' ' << HTTP_INTERNAL_SERVER_ERROR << ' ' << reason << "\r\n";
+                    oss << "Content-Type: text/plain; charset=UTF-8\r\n";
+                    oss << "Content-Length: " << msg.size() << "\r\n";
+                    oss << "Connection: close\r\n\r\n";
+                    oss << msg;
+                    return oss.str();
                 }
+                close(fd);
+                // set a default content type if not already provided
+                if (headers.find("Content-Type") == headers.end())
+                    headers["Content-Type"] = "text/html; charset=UTF-8";
+                createOkResponse(request);
+                return fullResponse;
             }
-            else
-                createErrorResponse(request, HTTP_FORBIDDEN);
+            // open failed
+            std::ostringstream oss;
+            const std::string reason = getReasonPhraseFromCode(HTTP_INTERNAL_SERVER_ERROR);
+            const std::string msg = "Open error";
+            oss << request.getHttpVersion() << ' ' << HTTP_INTERNAL_SERVER_ERROR << ' ' << reason << "\r\n";
+            oss << "Content-Type: text/plain; charset=UTF-8\r\n";
+            oss << "Content-Length: " << msg.size() << "\r\n";
+            oss << "Connection: close\r\n\r\n";
+            oss << msg;
+            return oss.str();
         }
-        else
-            createErrorResponse(request, HTTP_NOT_FOUND);
+        // Forbidden
+        std::ostringstream oss;
+        const std::string reason = getReasonPhraseFromCode(HTTP_FORBIDDEN);
+        const std::string msg = "Forbidden";
+        oss << request.getHttpVersion() << ' ' << HTTP_FORBIDDEN << ' ' << reason << "\r\n";
+        oss << "Content-Type: text/plain; charset=UTF-8\r\n";
+        oss << "Content-Length: " << msg.size() << "\r\n";
+        oss << "Connection: close\r\n\r\n";
+        oss << msg;
+        return oss.str();
     }
+    // Not found
+    {
+        std::ostringstream oss;
+        const std::string reason = getReasonPhraseFromCode(HTTP_NOT_FOUND);
+        const std::string msg = "Not Found";
+        oss << request.getHttpVersion() << ' ' << HTTP_NOT_FOUND << ' ' << reason << "\r\n";
+        oss << "Content-Type: text/plain; charset=UTF-8\r\n";
+        oss << "Content-Length: " << msg.size() << "\r\n";
+        oss << "Connection: close\r\n\r\n";
+        oss << msg;
+        return oss.str();
+    }
+}
 
+// Implement the declared but undefined helpers to avoid linker errors
+void HttpResponse::createErrorResponse(const HttpRequest &request, int errorCode) const
+{
+    (void)request;
+    (void)errorCode;
+    // Intentionally left minimal; createGetResponse builds and returns error strings directly.
 }
 
 std::string HttpResponse::createResponse(const HttpRequest &request)
@@ -169,4 +258,19 @@ std::string HttpResponse::createResponse(const HttpRequest &request)
     else
         rawResponse = response.createUnknowResponse(request);
     return (rawResponse);
+}
+
+// Provide a minimal implementation for unknown methods to satisfy linker
+const std::string HttpResponse::createUnknowResponse(const HttpRequest &request) const
+{
+    std::ostringstream oss;
+    const std::string reason = getReasonPhraseFromCode(HTTP_METHOD_NOT_ALLOWED);
+    const std::string msg = "Method Not Allowed";
+    oss << request.getHttpVersion() << ' ' << HTTP_METHOD_NOT_ALLOWED << ' ' << reason << "\r\n";
+    oss << "Allow: GET, POST, DELETE\r\n";
+    oss << "Content-Type: text/plain; charset=UTF-8\r\n";
+    oss << "Content-Length: " << msg.size() << "\r\n";
+    oss << "Connection: close\r\n\r\n";
+    oss << msg;
+    return oss.str();
 }

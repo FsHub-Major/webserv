@@ -14,7 +14,7 @@ void HttpRequest::parseQuery(void)
     std::string key, val;
 
     query = split(uri.substr(uri.find_first_of('?') + 1), "&");
-    for(int i = 0; i < query.size(); i++)
+    for(size_t i = 0; i < query.size(); i++)
     {
         key = query[i].substr(0, query[i].find_first_of('='));
         val = query[i].substr(query[i].find_first_of('=') + 1);
