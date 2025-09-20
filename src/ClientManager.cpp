@@ -157,7 +157,7 @@ void ClientManager::updateActivity(int socket_fd) {
 }
 
 
-void ClientManager::checkTimeouts(fd_set *readfds)
+void ClientManager::checkTimeouts()
 {
     time_t current_time = time(NULL);
     std::map<int, Client>::iterator it = clients.begin();

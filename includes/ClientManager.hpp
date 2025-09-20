@@ -28,7 +28,7 @@ public:
     void removeClient(int socket_fd);
     
     void updateActivity(int socket_fd);
-    void checkTimeouts(fd_set *readfds);
+    void checkTimeouts();
     
     void setupClientFds(fd_set* readfds, int* max_fd);
     void processClientRequest(fd_set* readfds);

@@ -98,7 +98,7 @@ void Server::run() {
             {
                 // check avaible fds to see if deleted 
                 Debug::inspectReadfds(&readfds, max_fd, server_fd);
-                clients.cleanupInvalidFds(&readfds);
+                clients.cleanupInvalidFds();
                 continue;
             }
             else if (errno == EINTR)
