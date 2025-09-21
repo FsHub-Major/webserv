@@ -29,7 +29,7 @@ public:
     const std::string& getBody() const;
     const std::map<std::string, std::string>& getHeaders() const;
     
-    static std::string createResponse(const HttpRequest &request);
+    static std::string createResponse(const HttpRequest &request, const ServerConfig& config);
 
     // Helper method to get reason phrase from status code
     static std::string getReasonPhraseFromCode(int statusCode);

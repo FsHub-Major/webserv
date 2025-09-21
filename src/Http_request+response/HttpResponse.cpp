@@ -239,7 +239,7 @@ const std::string HttpResponse::createUnknowResponse(const HttpRequest &request)
     return resp.str();
 }
 
-std::string HttpResponse::createResponse(const HttpRequest &request)
+std::string HttpResponse::createResponse(const HttpRequest &request, const ServerConfig& config)
 {
     HttpResponse response;
     std::string rawResponse;
