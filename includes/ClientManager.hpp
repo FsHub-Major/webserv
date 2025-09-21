@@ -31,11 +31,6 @@ public:
     void updateActivity(int socket_fd);
     void checkTimeouts();
     
-    // legacy select helpers (to be removed after migration)
-    void setupClientFds(fd_set* readfds, int* max_fd);
-    void processClientRequest(fd_set* readfds);
-    void cleanupInvalidFds();
-
     // poll based processing
     void processClientRequestPoll(const std::vector<int>& readable_fds);
 

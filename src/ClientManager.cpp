@@ -23,30 +23,6 @@ ClientManager::~ClientManager() {
 }
 
 
-void ClientManager::setupClientFds(fd_set* readfds, int* max_fd)
-{
-    for (std::map<int, Client>::iterator it = clients.begin(); it != clients.end(); ++it)
-    {
-        int socket_fd = it->first;
-
-        // validate if fd is still valid
-        if (fcntl(socket_fd, F_GETFL) == -1 && errno ==  EBADF)
-        {
-            printf("Removing invalid fd %d from setupClientFds\n", socket_fd);
-            removeClient(socket_fd);
-            it = clients.begin();
-        } 
-        else 
-        {
-            FD_SET(socket_fd, readfds);
-            if (socket_fd > *max_fd) {
-                *max_fd = socket_fd;
-            }
-        }
-    }
-}
-
-
 bool ClientManager::addClient(int socket_fd, const struct sockaddr_in& addr) {
     if (isFull()) {
         std::cerr << "ClientManager: Maximum clients reached (" << MAX_CLIENTS << ")" << std::endl;
@@ -83,24 +59,6 @@ void ClientManager::removeClient(int socket_fd) {
     }
 }
 
-void ClientManager::cleanupInvalidFds() {     
-    
-    std::map<int, Client>::iterator it = clients.begin();
-    
-    while (it != clients.end()) {
-        int socket_fd = it->first;
-        
-        int error = 0;
-        socklen_t len = sizeof(error);
-        if (getsockopt(socket_fd, SOL_SOCKET, SO_ERROR, &error, &len) < 0) {
-            printf("Removing invalid fd: %d (error: %d)\n", socket_fd, errno);
-            close(socket_fd);
-            clients.erase(it++);
-        } else {
-            ++it;
-        }
-    }
-}
 
 
 int ClientManager::getClientCount() const {
@@ -109,38 +67,6 @@ int ClientManager::getClientCount() const {
 
 bool ClientManager::isFull() const {
     return clients.size() >= MAX_CLIENTS;
-}
-
-void ClientManager::processClientRequest(fd_set* readfds) {
-    std::map<int, Client>::iterator it = clients.begin();
-    
-    while (it != clients.end()) {
-        int socket_fd = it->first;
-        if (FD_ISSET(socket_fd, readfds)) {
-            char buffer[1024] = {0};
-            int valread = read(socket_fd, buffer, sizeof(buffer));
-            
-            if (valread == 0) {
-                // Connection closed by client
-                printf("Client disconnected: socket fd here %d\n", socket_fd);
-                //removeClient(it->first); this is segfault when "it" no longer exists
-                clients.erase(it++); // C++98 erase returns void; erase then advance
-
-            } else if (valread > 0) {
-                // Process the request and send response
-                buffer[valread] = '\0';
-                sendHttpResponse(socket_fd);
-                updateActivity(socket_fd);
-                ++it;
-            } else {
-                // Read error
-                perror("read");
-                clients.erase(it++); // C++98 erase returns void; erase then advance
-            }
-        } else {
-            ++it;
-        }
-    }
 }
 
 // poll variant: readable_fds are those with POLLIN ready
