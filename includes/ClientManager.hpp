@@ -19,10 +19,11 @@ struct Client {
 
 class ClientManager {
 private:
+    const ServerConfig& config;
     std::map<int, Client> clients;
     
 public:
-    ClientManager();
+    ClientManager(const ServerConfig & config);
     ~ClientManager();
     
     bool addClient(int socket_fd, const struct sockaddr_in& addr);
@@ -46,4 +47,6 @@ private:
     int findClientBySocket(int socket_fd);
     void handleClientData(int index);
     void sendHttpResponse(int socket_fd);
+    std::string readFullRequest(int socket_fd);
+
 };
