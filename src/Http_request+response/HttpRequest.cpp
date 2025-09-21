@@ -14,7 +14,7 @@ void HttpRequest::parseQuery(void)
     std::string key, val;
 
     query = split(uri.substr(uri.find_first_of('?') + 1), "&");
-    for(int i = 0; i < query.size(); i++)
+    for(std::size_t i = 0; i < query.size(); i++)
     {
         key = query[i].substr(0, query[i].find_first_of('='));
         val = query[i].substr(query[i].find_first_of('=') + 1);
@@ -33,7 +33,8 @@ bool HttpRequest::parseRequest(const std::string &request, const std::string roo
     std::istringstream req_stream(request);
     req_stream >> method >> uri >> httpVersion;
 
-    if (uri.find('?'))
+    // if there is a '?' in the URI, parse query
+    if (uri.find('?') != std::string::npos)
     {
         parseQuery();
         isQuery = true;

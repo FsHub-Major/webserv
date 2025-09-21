@@ -123,8 +123,8 @@ void ClientManager::processClientRequest(fd_set* readfds) {
             if (valread == 0) {
                 // Connection closed by client
                 printf("Client disconnected: socket fd here %d\n", socket_fd);
-                //removeClient(it->first); this is sigfault when "it" no longer exist 
-                it = clients.erase(it); // erase and get next iterator 
+                //removeClient(it->first); this is segfault when "it" no longer exists
+                clients.erase(it++); // C++98 erase returns void; erase then advance
 
             } else if (valread > 0) {
                 // Process the request and send response
@@ -135,7 +135,7 @@ void ClientManager::processClientRequest(fd_set* readfds) {
             } else {
                 // Read error
                 perror("read");
-                it = clients.erase(it); // erase and get next iterator 
+                clients.erase(it++); // C++98 erase returns void; erase then advance
             }
         } else {
             ++it;

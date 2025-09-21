@@ -105,54 +105,138 @@ void HttpResponse::updateContentLength()
 void HttpResponse::createOkResponse(const HttpRequest &request)
 {
     updateContentLength();
-    fullResponse = request.getHttpVersion() + " " + "200 " + getReasonPhraseFromCode(200);
-    fullResponse =fullResponse  + "/n" + "Content-Length" + headers["Content-Length"];
-    fullResponse += "\n\n";
+    // Proper HTTP/1.1 formatting using CRLF
+    fullResponse.clear();
+    fullResponse = request.getHttpVersion() + " 200 " + getReasonPhraseFromCode(200) + "\r\n";
+    fullResponse += "Content-Length: " + headers["Content-Length"] + "\r\n";
+    if (headers.find("Content-Type") != headers.end())
+        fullResponse += "Content-Type: " + headers["Content-Type"] + "\r\n";
+    else
+        fullResponse += "Content-Type: text/html; charset=UTF-8\r\n";
+    fullResponse += "Connection: close\r\n";
+    fullResponse += "\r\n";
     fullResponse += body;
+}
+
+// Define missing function: builds an error response string
+std::string HttpResponse::createErrorResponse(const HttpRequest &request, int errorCode) const
+{
+    const std::string reason = getReasonPhraseFromCode(errorCode);
+    std::ostringstream body_ss;
+    body_ss << "<html><head><title>" << errorCode << " " << reason
+            << "</title></head><body><h1>" << errorCode << " " << reason
+            << "</h1></body></html>";
+    const std::string errBody = body_ss.str();
+
+    std::ostringstream resp;
+    resp << request.getHttpVersion() << " " << errorCode << " " << reason << "\r\n";
+    resp << "Content-Type: text/html; charset=UTF-8\r\n";
+    resp << "Content-Length: " << errBody.size() << "\r\n";
+    resp << "Connection: close\r\n";
+    resp << "\r\n";
+    resp << errBody;
+    return resp.str();
 }
 
 const std::string HttpResponse::createPostResponse(const HttpRequest &request) const
 {
-
+    // Minimal 501 (adjust later when implementing POST)
+    const std::string body = "<html><body><h1>501 Not Implemented</h1></body></html>";
+    std::ostringstream resp;
+    resp << request.getHttpVersion() << " 501 Not Implemented\r\n";
+    resp << "Content-Type: text/html; charset=UTF-8\r\n";
+    resp << "Content-Length: " << body.size() << "\r\n";
+    resp << "Connection: close\r\n";
+    resp << "\r\n";
+    resp << body;
+    return resp.str();
 }
 
 const std::string HttpResponse::createDeleteResponse(const HttpRequest &request) const
 {
-
+    // Minimal 501 (adjust later when implementing DELETE)
+    const std::string body = "<html><body><h1>501 Not Implemented</h1></body></html>";
+    std::ostringstream resp;
+    resp << request.getHttpVersion() << " 501 Not Implemented\r\n";
+    resp << "Content-Type: text/html; charset=UTF-8\r\n";
+    resp << "Content-Length: " << body.size() << "\r\n";
+    resp << "Connection: close\r\n";
+    resp << "\r\n";
+    resp << body;
+    return resp.str();
 }
-
 
 const std::string HttpResponse::createGetResponse(const HttpRequest &request)
 {
     struct stat fileStat;
     int fd;
     std::string path;
-    char *buffer;
+    char buffer[BUFF_SIZE];
+    ssize_t n;
 
-    if (!request.getUri().find('?'))
-    {
-        path = request.getRoot() + request.getUri();
-        path.insert(path.begin(), '.');
-        if (stat(path.c_str(), &fileStat) == 0)
-        {
-            if (access(path.c_str(), R_OK) == 0)
-            {
-                fd = open(path.c_str(), O_RDONLY);
-                if (fd > 0)
-                {
-                    while (read(fd, buffer, BUFF_SIZE) > 0)
-                        body += buffer;
-                    createOkResponse(request);
-                    close(fd);
-                }
-            }
-            else
-                createErrorResponse(request, HTTP_FORBIDDEN);
-        }
-        else
-            createErrorResponse(request, HTTP_NOT_FOUND);
+    // Build filesystem path and strip query if present
+    std::string uri = request.getUri();
+    std::string::size_type qpos = uri.find('?');
+    if (qpos != std::string::npos)
+        uri = uri.substr(0, qpos);
+
+    // Join root + uri (root already like "./www")
+    path = request.getRoot() + uri;
+
+    if (stat(path.c_str(), &fileStat) != 0) {
+        return createErrorResponse(request, HTTP_NOT_FOUND);
+    }
+    if (access(path.c_str(), R_OK) != 0) {
+        return createErrorResponse(request, HTTP_FORBIDDEN);
     }
 
+    fd = open(path.c_str(), O_RDONLY);
+    if (fd < 0) {
+        return createErrorResponse(request, HTTP_INTERNAL_SERVER_ERROR);
+    }
+
+    body.clear();
+    while ((n = read(fd, buffer, sizeof(buffer))) > 0) {
+        body.append(buffer, n);
+    }
+    if (n < 0) {
+        close(fd);
+        return createErrorResponse(request, HTTP_INTERNAL_SERVER_ERROR);
+    }
+    close(fd);
+
+    // Very basic content type guessing
+    std::string ctype = "application/octet-stream";
+    std::string::size_type dot = path.rfind('.');
+    if (dot != std::string::npos) {
+        std::string ext = path.substr(dot);
+        if (ext == ".html" || ext == ".htm") ctype = "text/html; charset=UTF-8";
+        else if (ext == ".css") ctype = "text/css";
+        else if (ext == ".js") ctype = "application/javascript";
+        else if (ext == ".json") ctype = "application/json";
+        else if (ext == ".png") ctype = "image/png";
+        else if (ext == ".jpg" || ext == ".jpeg") ctype = "image/jpeg";
+        else if (ext == ".gif") ctype = "image/gif";
+    }
+    setContentType(ctype);
+
+    createOkResponse(request);
+    return fullResponse;
+}
+
+// Define missing function: 405 for unknown/unsupported methods
+const std::string HttpResponse::createUnknowResponse(const HttpRequest &request) const
+{
+    const std::string body = "<html><body><h1>405 Method Not Allowed</h1></body></html>";
+    std::ostringstream resp;
+    resp << request.getHttpVersion() << " 405 Method Not Allowed\r\n";
+    resp << "Allow: GET, POST, DELETE\r\n";
+    resp << "Content-Type: text/html; charset=UTF-8\r\n";
+    resp << "Content-Length: " << body.size() << "\r\n";
+    resp << "Connection: close\r\n";
+    resp << "\r\n";
+    resp << body;
+    return resp.str();
 }
 
 std::string HttpResponse::createResponse(const HttpRequest &request)
