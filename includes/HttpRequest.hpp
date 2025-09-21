@@ -18,11 +18,7 @@ private:
     
     // Query parameters (from URL)
    std::map<std::string, std::string>  queryParams;
-    
-    // Additional parsed data
-   std::string                         host;
-   int contentLength;
-   std::string                         contentType;
+  
     
     // Raw request data
    std::string rawRequest;
