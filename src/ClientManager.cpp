@@ -1,4 +1,6 @@
 #include "ClientManager.hpp"
+#include "HttpRequest.hpp"
+#include "HttpResponse.hpp"
 #include "webserv.hpp"
 #include "macros.hpp"
 #include <iostream>
@@ -9,7 +11,7 @@
 // to delete, maybe not 
 #include <fcntl.h>
 
-ClientManager::ClientManager() {
+ClientManager::ClientManager(const ServerConfig & config) : config(config) {
 
     std::cout << " ClientManager Constructor called" << std::endl;
 }
@@ -60,7 +62,6 @@ void ClientManager::removeClient(int socket_fd) {
 }
 
 
-
 int ClientManager::getClientCount() const {
     return (clients.size()); // cast to int ?  
 }
@@ -69,27 +70,68 @@ bool ClientManager::isFull() const {
     return clients.size() >= MAX_CLIENTS;
 }
 
+std::string ClientManager::readFullRequest(int socket_fd) {
+    std::string request;
+    char buffer[BUFF_SIZE];
+    
+    while (true) {
+        int valread = read(socket_fd, buffer, sizeof(buffer));
+        if (valread <= 0) {
+            return "";  // Connection closed or error
+        }
+        
+        request.append(buffer, valread);
+        
+        // Check if headers are complete (double CRLF)
+        if (request.find("\r\n\r\n") != std::string::npos) {
+            // Check if body is complete (if Content-Length present)
+            size_t header_end = request.find("\r\n\r\n");
+            std::string headers = request.substr(0, header_end);
+            
+            // Extract Content-Length
+            size_t cl_pos = headers.find("Content-Length: ");
+            if (cl_pos != std::string::npos) {
+                size_t cl_end = headers.find("\r\n", cl_pos);
+                int content_length = atoi(headers.substr(cl_pos + 16, cl_end - cl_pos - 16).c_str());
+                
+                // Calculate body size
+                size_t body_start = header_end + 4;
+                size_t current_body_size = request.size() - body_start;
+                
+                if (current_body_size < (size_t)content_length) {
+                    continue; 
+                }
+            }
+            
+            return request;
+        }
+    }
+}
+
 // poll variant: readable_fds are those with POLLIN ready
 void ClientManager::processClientRequestPoll(const std::vector<int>& readable_fds) {
     for (size_t i = 0; i < readable_fds.size(); ++i) {
         int socket_fd = readable_fds[i];
-        std::map<int, Client>::iterator it = clients.find(socket_fd);
-        if (it == clients.end())
-            continue; // might have been removed already
-        char buffer[1024] = {0};
-        int valread = read(socket_fd, buffer, sizeof(buffer));
-        if (valread == 0) {
-            // client closed
+
+
+        std::string raw_request = readFullRequest(socket_fd);
+        if (raw_request.empty())
+        {
             removeClient(socket_fd);
             continue;
-        } else if (valread > 0) {
-            buffer[valread] = '\0';
-            sendHttpResponse(socket_fd);
-            updateActivity(socket_fd);
-        } else {
-            perror("read");
-            removeClient(socket_fd);
         }
+
+        HttpRequest request;
+        if (request.parseRequest(raw_request, this->config.root))
+        {
+            std::string raw_response = HttpResponse::createResponse(request, this->config);
+            send(socket_fd , raw_response.c_str(), raw_response.length(), 0);
+        }
+        else{
+            std::string error_response = "HTTP/1.1 400 Bad Request\r\n\r\n";
+            send(socket_fd , error_response.c_str(), error_response.length(), 0);
+        }
+        updateActivity(socket_fd);
     }
 }
 
