@@ -241,6 +241,7 @@ const std::string HttpResponse::createUnknowResponse(const HttpRequest &request)
 
 std::string HttpResponse::createResponse(const HttpRequest &request, const ServerConfig& config)
 {
+    (void) config;
     HttpResponse response;
     std::string rawResponse;
 
