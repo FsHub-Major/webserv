@@ -122,14 +122,18 @@ void ClientManager::processClientRequestPoll(const std::vector<int>& readable_fd
         }
 
         HttpRequest request;
+        std::string response;
         if (request.parseRequest(raw_request, this->config.root))
+            response = HttpResponse::createResponse(request, this->config);
+        else
+            response = "HTTP/1.1 400 Bad Request\r\n\r\n";
+
+        ssize_t sent = send(socket_fd , response.c_str(), response.length(), 0);
+        if (sent == -1)
         {
-            std::string raw_response = HttpResponse::createResponse(request, this->config);
-            send(socket_fd , raw_response.c_str(), raw_response.length(), 0);
-        }
-        else{
-            std::string error_response = "HTTP/1.1 400 Bad Request\r\n\r\n";
-            send(socket_fd , error_response.c_str(), error_response.length(), 0);
+            std::cerr << "Send failed for socket " << socket_fd << std::endl;
+            removeClient(socket_fd);
+            continue;
         }
         updateActivity(socket_fd);
     }
