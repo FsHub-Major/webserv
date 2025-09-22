@@ -115,12 +115,16 @@ void ClientManager::processClientRequestPoll(const std::vector<int>& readable_fd
 
 
         std::string raw_request = readFullRequest(socket_fd);
+
         if (raw_request.empty())
         {
             removeClient(socket_fd);
             continue;
         }
 
+        
+        std::cout << "RAW REQUEST" << std::endl;
+        std::cout << raw_request << std::endl;
         HttpRequest request;
         std::string response;
         if (request.parseRequest(raw_request, this->config.root))
