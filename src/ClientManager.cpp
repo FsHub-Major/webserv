@@ -1,4 +1,6 @@
 #include "ClientManager.hpp"
+#include "HttpRequest.hpp"
+#include "HttpResponse.hpp"
 #include "webserv.hpp"
 #include "macros.hpp"
 #include <iostream>
@@ -9,7 +11,7 @@
 // to delete, maybe not 
 #include <fcntl.h>
 
-ClientManager::ClientManager() {
+ClientManager::ClientManager(const ServerConfig & config) : config(config) {
 
     std::cout << " ClientManager Constructor called" << std::endl;
 }
@@ -20,30 +22,6 @@ ClientManager::~ClientManager() {
     }
     clients.clear();
     std::cout << " ~ClientManager called" << std::endl;
-}
-
-
-void ClientManager::setupClientFds(fd_set* readfds, int* max_fd)
-{
-    for (std::map<int, Client>::iterator it = clients.begin(); it != clients.end(); ++it)
-    {
-        int socket_fd = it->first;
-
-        // validate if fd is still valid
-        if (fcntl(socket_fd, F_GETFL) == -1 && errno ==  EBADF)
-        {
-            printf("Removing invalid fd %d from setupClientFds\n", socket_fd);
-            removeClient(socket_fd);
-            it = clients.begin();
-        } 
-        else 
-        {
-            FD_SET(socket_fd, readfds);
-            if (socket_fd > *max_fd) {
-                *max_fd = socket_fd;
-            }
-        }
-    }
 }
 
 
@@ -83,25 +61,6 @@ void ClientManager::removeClient(int socket_fd) {
     }
 }
 
-void ClientManager::cleanupInvalidFds() {     
-    
-    std::map<int, Client>::iterator it = clients.begin();
-    
-    while (it != clients.end()) {
-        int socket_fd = it->first;
-        
-        int error = 0;
-        socklen_t len = sizeof(error);
-        if (getsockopt(socket_fd, SOL_SOCKET, SO_ERROR, &error, &len) < 0) {
-            printf("Removing invalid fd: %d (error: %d)\n", socket_fd, errno);
-            close(socket_fd);
-            clients.erase(it++);
-        } else {
-            ++it;
-        }
-    }
-}
-
 
 int ClientManager::getClientCount() const {
     return (clients.size()); // cast to int ?  
@@ -111,34 +70,40 @@ bool ClientManager::isFull() const {
     return clients.size() >= MAX_CLIENTS;
 }
 
-void ClientManager::processClientRequest(fd_set* readfds) {
-    std::map<int, Client>::iterator it = clients.begin();
+std::string ClientManager::readFullRequest(int socket_fd) {
+    std::string request;
+    char buffer[BUFF_SIZE];
     
-    while (it != clients.end()) {
-        int socket_fd = it->first;
-        if (FD_ISSET(socket_fd, readfds)) {
-            char buffer[1024] = {0};
-            int valread = read(socket_fd, buffer, sizeof(buffer));
+    while (true) {
+        int valread = read(socket_fd, buffer, sizeof(buffer));
+        if (valread <= 0) {
+            return "";  // Connection closed or error
+        }
+        
+        request.append(buffer, valread);
+        
+        // Check if headers are complete (double CRLF)
+        if (request.find("\r\n\r\n") != std::string::npos) {
+            // Check if body is complete (if Content-Length present)
+            size_t header_end = request.find("\r\n\r\n");
+            std::string headers = request.substr(0, header_end);
             
-            if (valread == 0) {
-                // Connection closed by client
-                printf("Client disconnected: socket fd here %d\n", socket_fd);
-                //removeClient(it->first); this is segfault when "it" no longer exists
-                clients.erase(it++); // C++98 erase returns void; erase then advance
-
-            } else if (valread > 0) {
-                // Process the request and send response
-                buffer[valread] = '\0';
-                sendHttpResponse(socket_fd);
-                updateActivity(socket_fd);
-                ++it;
-            } else {
-                // Read error
-                perror("read");
-                clients.erase(it++); // C++98 erase returns void; erase then advance
+            // Extract Content-Length
+            size_t cl_pos = headers.find("Content-Length: ");
+            if (cl_pos != std::string::npos) {
+                size_t cl_end = headers.find("\r\n", cl_pos);
+                int content_length = atoi(headers.substr(cl_pos + 16, cl_end - cl_pos - 16).c_str());
+                
+                // Calculate body size
+                size_t body_start = header_end + 4;
+                size_t current_body_size = request.size() - body_start;
+                
+                if (current_body_size < (size_t)content_length) {
+                    continue; 
+                }
             }
-        } else {
-            ++it;
+            
+            return request;
         }
     }
 }
@@ -147,23 +112,34 @@ void ClientManager::processClientRequest(fd_set* readfds) {
 void ClientManager::processClientRequestPoll(const std::vector<int>& readable_fds) {
     for (size_t i = 0; i < readable_fds.size(); ++i) {
         int socket_fd = readable_fds[i];
-        std::map<int, Client>::iterator it = clients.find(socket_fd);
-        if (it == clients.end())
-            continue; // might have been removed already
-        char buffer[1024] = {0};
-        int valread = read(socket_fd, buffer, sizeof(buffer));
-        if (valread == 0) {
-            // client closed
+
+
+        std::string raw_request = readFullRequest(socket_fd);
+
+        if (raw_request.empty())
+        {
             removeClient(socket_fd);
             continue;
-        } else if (valread > 0) {
-            buffer[valread] = '\0';
-            sendHttpResponse(socket_fd);
-            updateActivity(socket_fd);
-        } else {
-            perror("read");
-            removeClient(socket_fd);
         }
+
+        
+        std::cout << "RAW REQUEST" << std::endl;
+        std::cout << raw_request << std::endl;
+        HttpRequest request;
+        std::string response;
+        if (request.parseRequest(raw_request, this->config.root))
+            response = HttpResponse::createResponse(request, this->config);
+        else
+            response = "HTTP/1.0 400 Bad Request\r\n\r\n";
+
+        ssize_t sent = send(socket_fd , response.c_str(), response.length(), 0);
+        if (sent == -1)
+        {
+            std::cerr << "Send failed for socket " << socket_fd << std::endl;
+            removeClient(socket_fd);
+            continue;
+        }
+        updateActivity(socket_fd);
     }
 }
 

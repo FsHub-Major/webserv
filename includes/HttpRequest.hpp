@@ -5,7 +5,7 @@ class HttpRequest
 {
 private:
     // Request line components
-   std::string                         method;          // GET, POST, PUT, DELETE, etc.
+   std::string                         method;          // GET, POST, DELETE. We only need 3
    std::string                         uri;            // /path/to/resource
    std::string                         httpVersion;    // HTTP/1.1
    std::string                         root;           //path to root server
@@ -18,11 +18,7 @@ private:
     
     // Query parameters (from URL)
    std::map<std::string, std::string>  queryParams;
-    
-    // Additional parsed data
-   std::string                         host;
-   int contentLength;
-   std::string                         contentType;
+  
     
     // Raw request data
    std::string rawRequest;

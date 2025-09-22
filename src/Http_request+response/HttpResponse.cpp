@@ -138,8 +138,10 @@ std::string HttpResponse::createErrorResponse(const HttpRequest &request, int er
     return resp.str();
 }
 
-const std::string HttpResponse::createPostResponse(const HttpRequest &request) const
+const std::string HttpResponse::createPostResponse(const HttpRequest &request, const ServerConfig & config) const
 {
+
+    (void) config;
     // Minimal 501 (adjust later when implementing POST)
     const std::string body = "<html><body><h1>501 Not Implemented</h1></body></html>";
     std::ostringstream resp;
@@ -152,8 +154,10 @@ const std::string HttpResponse::createPostResponse(const HttpRequest &request) c
     return resp.str();
 }
 
-const std::string HttpResponse::createDeleteResponse(const HttpRequest &request) const
+
+const std::string HttpResponse::createDeleteResponse(const HttpRequest &request, const ServerConfig &config) const
 {
+    (void) config;
     // Minimal 501 (adjust later when implementing DELETE)
     const std::string body = "<html><body><h1>501 Not Implemented</h1></body></html>";
     std::ostringstream resp;
@@ -166,7 +170,7 @@ const std::string HttpResponse::createDeleteResponse(const HttpRequest &request)
     return resp.str();
 }
 
-const std::string HttpResponse::createGetResponse(const HttpRequest &request)
+const std::string HttpResponse::createGetResponse(const HttpRequest &request, const ServerConfig &config)
 {
     struct stat fileStat;
     int fd;
@@ -176,12 +180,42 @@ const std::string HttpResponse::createGetResponse(const HttpRequest &request)
 
     // Build filesystem path and strip query if present
     std::string uri = request.getUri();
+
+
+    std::cout << "URI => " << uri << std::endl;
+
     std::string::size_type qpos = uri.find('?');
     if (qpos != std::string::npos)
         uri = uri.substr(0, qpos);
 
-    // Join root + uri (root already like "./www")
-    path = request.getRoot() + uri;
+    // remove dangerous characters and normalize path 
+    // remove .. and / 
+    size_t pos;
+    while ((pos = uri.find("..")) != std::string::npos)
+        uri.erase(pos, 2);
+    
+    if (!uri.empty() && uri[0] == '/')
+        uri = uri.substr(1);
+
+    // root dir request, check for index files
+    if (uri.empty())
+    {
+        for (size_t i = 0; i < config.index_files.size(); ++i)
+        {
+            std::string index_path = request.getRoot() + "/" + config.index_files[i];
+            if (stat(index_path.c_str(), &fileStat) == 0 && !S_ISDIR(fileStat.st_mode))
+            {
+                uri = config.index_files[i]; 
+                break;
+            }
+        }
+        if (uri.empty())
+            return (createErrorResponse(request, HTTP_FORBIDDEN));
+    }
+    
+    path = request.getRoot() + "/" + uri;
+
+    std::cout << "PATH => " << path << std::endl;
 
     if (stat(path.c_str(), &fileStat) != 0) {
         return createErrorResponse(request, HTTP_NOT_FOUND);
@@ -225,8 +259,9 @@ const std::string HttpResponse::createGetResponse(const HttpRequest &request)
 }
 
 // Define missing function: 405 for unknown/unsupported methods
-const std::string HttpResponse::createUnknowResponse(const HttpRequest &request) const
+const std::string HttpResponse::createUnknowResponse(const HttpRequest &request, const ServerConfig &config) const
 {
+    (void) config;
     const std::string body = "<html><body><h1>405 Method Not Allowed</h1></body></html>";
     std::ostringstream resp;
     resp << request.getHttpVersion() << " 405 Method Not Allowed\r\n";
@@ -239,18 +274,19 @@ const std::string HttpResponse::createUnknowResponse(const HttpRequest &request)
     return resp.str();
 }
 
-std::string HttpResponse::createResponse(const HttpRequest &request)
+std::string HttpResponse::createResponse(const HttpRequest &request, const ServerConfig& config)
 {
+    (void) config;
     HttpResponse response;
     std::string rawResponse;
 
     if (request.getMethod() == "GET")
-        rawResponse = response.createGetResponse(request);
+        rawResponse = response.createGetResponse(request, config);
     else if (request.getMethod() == "POST")
-        rawResponse = response.createPostResponse(request);
+        rawResponse = response.createPostResponse(request, config);
     else if (request.getMethod() == "DELETE")
-        rawResponse = response.createDeleteResponse(request);
+        rawResponse = response.createDeleteResponse(request, config);
     else
-        rawResponse = response.createUnknowResponse(request);
+        rawResponse = response.createUnknowResponse(request, config);
     return (rawResponse);
 }

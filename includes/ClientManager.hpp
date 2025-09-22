@@ -19,10 +19,11 @@ struct Client {
 
 class ClientManager {
 private:
+    const ServerConfig& config;
     std::map<int, Client> clients;
     
 public:
-    ClientManager();
+    ClientManager(const ServerConfig & config);
     ~ClientManager();
     
     bool addClient(int socket_fd, const struct sockaddr_in& addr);
@@ -31,11 +32,6 @@ public:
     void updateActivity(int socket_fd);
     void checkTimeouts();
     
-    // legacy select helpers (to be removed after migration)
-    void setupClientFds(fd_set* readfds, int* max_fd);
-    void processClientRequest(fd_set* readfds);
-    void cleanupInvalidFds();
-
     // poll based processing
     void processClientRequestPoll(const std::vector<int>& readable_fds);
 
@@ -51,4 +47,6 @@ private:
     int findClientBySocket(int socket_fd);
     void handleClientData(int index);
     void sendHttpResponse(int socket_fd);
+    std::string readFullRequest(int socket_fd);
+
 };

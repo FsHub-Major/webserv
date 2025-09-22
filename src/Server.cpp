@@ -6,7 +6,7 @@
 #include <poll.h>
 
 Server::Server(const ServerConfig & config)
-        : config(config), clients(), server_fd(-1) ,is_running(false), is_init(false)
+        : config(config), clients(config), server_fd(-1) ,is_running(false), is_init(false)
 {
     std::memset(&address, 0 , sizeof(address));
     address.sin_family = AF_INET;
@@ -40,7 +40,7 @@ bool Server::init()
         return false;
     }
 
-    if (bind(server_fd, reinterpret_cast<sockaddr*>(&address), sizeof(address)) == -1) {
+    if (::bind(server_fd, reinterpret_cast<sockaddr*>(&address), sizeof(address)) == -1) {
         perror("bind");
         close(server_fd);
         return (false);

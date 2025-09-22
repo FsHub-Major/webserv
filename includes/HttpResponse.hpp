@@ -2,6 +2,7 @@
 
 #include "ext_libs.hpp"
 #include "HttpRequest.hpp"
+#include "Config.hpp" 
 
 class HttpResponse
 {
@@ -29,7 +30,7 @@ public:
     const std::string& getBody() const;
     const std::map<std::string, std::string>& getHeaders() const;
     
-    static std::string createResponse(const HttpRequest &request);
+    static std::string createResponse(const HttpRequest &request, const ServerConfig& config);
 
     // Helper method to get reason phrase from status code
     static std::string getReasonPhraseFromCode(int statusCode);
@@ -39,8 +40,8 @@ public:
     private:
         void createOkResponse(const HttpRequest &request);
         std::string createErrorResponse(const HttpRequest &request, int errorCode) const;
-        const std::string createGetResponse(const HttpRequest &request);
-        const std::string createPostResponse(const HttpRequest &request) const;
-        const std::string createDeleteResponse(const HttpRequest &request) const;
-        const std::string createUnknowResponse(const HttpRequest &request) const;
+        const std::string createGetResponse(const HttpRequest &request, const ServerConfig& config);
+        const std::string createPostResponse(const HttpRequest &request,  const ServerConfig& config) const;
+        const std::string createDeleteResponse(const HttpRequest &request,  const ServerConfig& config) const;
+        const std::string createUnknowResponse(const HttpRequest &request,  const ServerConfig& config) const;
 };
