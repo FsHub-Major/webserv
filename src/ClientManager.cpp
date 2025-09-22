@@ -126,7 +126,7 @@ void ClientManager::processClientRequestPoll(const std::vector<int>& readable_fd
         if (request.parseRequest(raw_request, this->config.root))
             response = HttpResponse::createResponse(request, this->config);
         else
-            response = "HTTP/1.1 400 Bad Request\r\n\r\n";
+            response = "HTTP/1.0 400 Bad Request\r\n\r\n";
 
         ssize_t sent = send(socket_fd , response.c_str(), response.length(), 0);
         if (sent == -1)
