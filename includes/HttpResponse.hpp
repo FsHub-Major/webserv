@@ -2,6 +2,7 @@
 
 #include "ext_libs.hpp"
 #include "HttpRequest.hpp"
+#include "Config.hpp" 
 
 class HttpResponse
 {
