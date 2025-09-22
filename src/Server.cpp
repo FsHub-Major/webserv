@@ -40,7 +40,7 @@ bool Server::init()
         return false;
     }
 
-    if (bind(server_fd, reinterpret_cast<sockaddr*>(&address), sizeof(address)) < 0) {
+    if (::bind(server_fd, reinterpret_cast<sockaddr*>(&address), sizeof(address)) == -1) {
         perror("bind");
         close(server_fd);
         return (false);
