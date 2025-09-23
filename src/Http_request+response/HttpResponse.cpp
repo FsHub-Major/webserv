@@ -104,15 +104,22 @@ void HttpResponse::updateContentLength()
 
 void HttpResponse::createOkResponse(const HttpRequest &request)
 {
-    updateContentLength();
-    fullResponse.clear();
-    fullResponse = request.getHttpVersion() + " 200 " + getReasonPhraseFromCode(200) + "\r\n";
-    fullResponse += "Content-Length: " + headers["Content-Length"] + "\r\n";
-    if (headers.find("Content-Type") != headers.end())
-        fullResponse += "Content-Type: " + headers["Content-Type"] + "\r\n";
-    else
-        fullResponse += "Content-Type: text/html; charset=UTF-8\r\n";
-    fullResponse += "\r\n";
+    if (request.getMethod() == "GET")
+    {
+        updateContentLength();
+        fullResponse.clear();
+        fullResponse = request.getHttpVersion() + " 200 " + getReasonPhraseFromCode(200) + "\r\n";
+        fullResponse += "Content-Length: " + headers["Content-Length"] + "\r\n";
+        if (headers.find("Content-Type") != headers.end())
+            fullResponse += "Content-Type: " + headers["Content-Type"] + "\r\n";
+        else
+            fullResponse += "Content-Type: text/html; charset=UTF-8\r\n";
+        fullResponse += "\r\n";
+    }
+    else if (request.getMethod() == "DELETE")
+    {
+        fullResponse = request.getHttpVersion() + " 204 " + getReasonPhraseFromCode(204) + "\r\n";
+    }
     fullResponse += body;
 }
 
@@ -139,33 +146,6 @@ std::string HttpResponse::createErrorResponse(const HttpRequest &request, int er
 const std::string HttpResponse::createPostResponse(const HttpRequest &request, const ServerConfig & config) const
 {
 
-    (void) config;
-    // Minimal 501 (adjust later when implementing POST)
-    const std::string body = "<html><body><h1>501 Not Implemented</h1></body></html>";
-    std::ostringstream resp;
-    resp << request.getHttpVersion() << " 501 Not Implemented\r\n";
-    resp << "Content-Type: text/html; charset=UTF-8\r\n";
-    resp << "Content-Length: " << body.size() << "\r\n";
-    resp << "Connection: close\r\n";
-    resp << "\r\n";
-    resp << body;
-    return resp.str();
-}
-
-
-const std::string HttpResponse::createDeleteResponse(const HttpRequest &request, const ServerConfig &config) const
-{
-    (void) config;
-    // Minimal 501 (adjust later when implementing DELETE)
-    const std::string body = "<html><body><h1>501 Not Implemented</h1></body></html>";
-    std::ostringstream resp;
-    resp << request.getHttpVersion() << " 501 Not Implemented\r\n";
-    resp << "Content-Type: text/html; charset=UTF-8\r\n";
-    resp << "Content-Length: " << body.size() << "\r\n";
-    resp << "Connection: close\r\n";
-    resp << "\r\n";
-    resp << body;
-    return resp.str();
 }
 
 const std::string HttpResponse::createGetResponse(const HttpRequest &request, const ServerConfig &config)
