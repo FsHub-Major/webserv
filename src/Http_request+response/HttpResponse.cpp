@@ -105,7 +105,6 @@ void HttpResponse::updateContentLength()
 void HttpResponse::createOkResponse(const HttpRequest &request)
 {
     updateContentLength();
-    // Proper HTTP/1.1 formatting using CRLF
     fullResponse.clear();
     fullResponse = request.getHttpVersion() + " 200 " + getReasonPhraseFromCode(200) + "\r\n";
     fullResponse += "Content-Length: " + headers["Content-Length"] + "\r\n";
@@ -113,7 +112,6 @@ void HttpResponse::createOkResponse(const HttpRequest &request)
         fullResponse += "Content-Type: " + headers["Content-Type"] + "\r\n";
     else
         fullResponse += "Content-Type: text/html; charset=UTF-8\r\n";
-    fullResponse += "Connection: close\r\n";
     fullResponse += "\r\n";
     fullResponse += body;
 }
@@ -177,13 +175,9 @@ const std::string HttpResponse::createGetResponse(const HttpRequest &request, co
     std::string path;
     char buffer[BUFF_SIZE];
     ssize_t n;
+    std::string uri;
 
-    // Build filesystem path and strip query if present
-    std::string uri = request.getUri();
-
-
-    std::cout << "URI => " << uri << std::endl;
-
+    uri = request.getRoot();
     std::string::size_type qpos = uri.find('?');
     if (qpos != std::string::npos)
         uri = uri.substr(0, qpos);
@@ -215,47 +209,49 @@ const std::string HttpResponse::createGetResponse(const HttpRequest &request, co
     
     path = request.getRoot() + "/" + uri;
 
-    std::cout << "PATH => " << path << std::endl;
-
-    if (stat(path.c_str(), &fileStat) != 0) {
-        return createErrorResponse(request, HTTP_NOT_FOUND);
-    }
-    if (access(path.c_str(), R_OK) != 0) {
-        return createErrorResponse(request, HTTP_FORBIDDEN);
-    }
+    if (stat(path.c_str(), &fileStat) != 0)
+        return (createErrorResponse(request, HTTP_NOT_FOUND));
+    if (access(path.c_str(), R_OK) != 0)
+        return (createErrorResponse(request, HTTP_FORBIDDEN));
 
     fd = open(path.c_str(), O_RDONLY);
-    if (fd < 0) {
-        return createErrorResponse(request, HTTP_INTERNAL_SERVER_ERROR);
-    }
+    if (fd < 0)
+        return (createErrorResponse(request, HTTP_INTERNAL_SERVER_ERROR));
 
     body.clear();
-    while ((n = read(fd, buffer, sizeof(buffer))) > 0) {
+    while ((n = read(fd, buffer, sizeof(buffer))) > 0)
         body.append(buffer, n);
-    }
-    if (n < 0) {
+    if (n < 0)
+    {
         close(fd);
         return createErrorResponse(request, HTTP_INTERNAL_SERVER_ERROR);
     }
     close(fd);
-
     // Very basic content type guessing
     std::string ctype = "application/octet-stream";
     std::string::size_type dot = path.rfind('.');
-    if (dot != std::string::npos) {
+    if (dot != std::string::npos)
+    {
         std::string ext = path.substr(dot);
-        if (ext == ".html" || ext == ".htm") ctype = "text/html; charset=UTF-8";
-        else if (ext == ".css") ctype = "text/css";
-        else if (ext == ".js") ctype = "application/javascript";
-        else if (ext == ".json") ctype = "application/json";
-        else if (ext == ".png") ctype = "image/png";
-        else if (ext == ".jpg" || ext == ".jpeg") ctype = "image/jpeg";
-        else if (ext == ".gif") ctype = "image/gif";
+        if (ext == ".html" || ext == ".htm")
+            ctype = "text/html; charset=UTF-8";
+        else if (ext == ".css")
+            ctype = "text/css";
+        else if (ext == ".js")
+            ctype = "application/javascript";
+        else if (ext == ".json")
+            ctype = "application/json";
+        else if (ext == ".png")
+            ctype = "image/png";
+        else if (ext == ".jpg" || ext == ".jpeg")
+            ctype = "image/jpeg";
+        else if (ext == ".gif")
+            ctype = "image/gif";
     }
     setContentType(ctype);
 
     createOkResponse(request);
-    return fullResponse;
+    return (fullResponse);
 }
 
 // Define missing function: 405 for unknown/unsupported methods
