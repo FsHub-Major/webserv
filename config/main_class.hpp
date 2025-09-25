@@ -6,7 +6,13 @@
 #include <vector>
 class ParsingServer {
     private:
-        std::vector<ServerConfig> _servers;
+        std::vector<ServerConfig> servers;
+        std::vector<std::string> tokens;
+        size_t pos;
+        std::string peek() const;
+        std::string get();
+        ServerConfig parseServer();
+        Location parseLocation(const std::string& path);
 
     public:
         ParsingServer(const std::string& filename);
