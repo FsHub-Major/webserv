@@ -100,10 +100,13 @@ std::string ClientManager::readFullRequest(int socket_fd) {
 }
 
 // poll variant: readable_fds are those with POLLIN ready
-void ClientManager::processClientRequestPoll(const std::vector<int>& readable_fds) {
+void ClientManager::processClientRequestPoll(const std::vector<int>& readable_fds)
+{
+    HttpRequest request;
+    std::string response;
+
     for (size_t i = 0; i < readable_fds.size(); ++i) {
         int socket_fd = readable_fds[i];
-
 
         std::string raw_request = readFullRequest(socket_fd);
 
@@ -113,18 +116,14 @@ void ClientManager::processClientRequestPoll(const std::vector<int>& readable_fd
             continue;
         }
 
-        
         std::cout << "RAW REQUEST" << std::endl;
         std::cout << raw_request << std::endl;
-        HttpRequest request;
-        std::string response;
         if (request.parseRequest(raw_request, this->config.root))
             response = HttpResponse::createResponse(request, this->config);
         else
             response = "HTTP/1.0 400 Bad Request\r\n\r\n";
 
-        ssize_t sent = send(socket_fd , response.c_str(), response.length(), 0);
-        if (sent == -1)
+        if (send(socket_fd , response.c_str(), response.length(), 0) < 0)
         {
             std::cerr << "Send failed for socket " << socket_fd << std::endl;
             removeClient(socket_fd);
