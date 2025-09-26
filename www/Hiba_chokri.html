@@ -1,0 +1,228 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Hiba Chokri — Interactive Profile</title>
+  <meta name="description" content="Animated profile page for GitHub user Hiba-chokri" />
+  <style>
+    /* Layout & typography */
+    :root{
+      --bg1:#0f172a; /* dark navy */
+      --accent1:#7c3aed; /* purple */
+      --accent2:#06b6d4; /* teal */
+      --glass: rgba(255,255,255,0.06);
+      --glass-strong: rgba(255,255,255,0.08);
+      --radius: 16px;
+      --card-pad: 18px;
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial;
+    }
+    html,body{height:100%;margin:0}
+    body{
+      background: radial-gradient(1200px 600px at 10% 20%, rgba(124,58,237,0.16), transparent),
+                  radial-gradient(1000px 500px at 90% 80%, rgba(6,182,212,0.12), transparent),
+                  linear-gradient(180deg,var(--bg1) 0%, #021028 100%);
+      color:#e6eef8;
+      -webkit-font-smoothing:antialiased;
+      -moz-osx-font-smoothing:grayscale;
+      padding:40px;
+      box-sizing:border-box;
+      display:flex;align-items:center;justify-content:center;
+    }
+
+    .stage{max-width:1100px;width:100%;display:grid;grid-template-columns:420px 1fr;gap:28px;align-items:start}
+
+    /* Profile card */
+    .profile{
+      background: linear-gradient(180deg, rgba(255,255,255,0.03), rgba(255,255,255,0.02));
+      border-radius:var(--radius);
+      padding:24px;backdrop-filter: blur(6px);box-shadow: 0 10px 30px rgba(2,6,23,0.6);
+      position:relative;overflow:hidden;
+    }
+
+    .avatar{
+      width:120px;height:120px;border-radius:14px;overflow:hidden;border:3px solid rgba(255,255,255,0.06);
+      display:inline-block;margin-right:16px;vertical-align:middle;object-fit:cover;background:#081226;
+      box-shadow: 0 6px 18px rgba(2,6,23,0.6), inset 0 1px 0 rgba(255,255,255,0.02);
+    }
+    .profile-head{display:flex;align-items:center}
+    h1{margin:0;font-size:22px;letter-spacing:-0.02em}
+    p.lead{margin:6px 0 0;color:#cfe8ff;opacity:0.9}
+
+    .badges{margin-top:14px;display:flex;gap:8px;flex-wrap:wrap}
+    .badge{padding:6px 10px;border-radius:999px;background:linear-gradient(90deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));font-size:13px}
+
+    /* Stats */
+    .stats{display:flex;gap:12px;margin-top:18px}
+    .stat{flex:1;background:var(--glass);padding:12px;border-radius:12px;text-align:center}
+    .stat .num{font-weight:700;font-size:20px}
+    .stat .label{font-size:12px;opacity:0.75}
+
+    /* Animated blobs */
+    .blobs{position:absolute;inset:0;pointer-events:none}
+    .blob{position:absolute;filter: blur(30px);opacity:0.85;mix-blend-mode:screen}
+    .blob.b1{width:260px;height:260px;background:linear-gradient(45deg,var(--accent1), #4f46e5);left:-60px;top:-20px;border-radius:50%;animation:float 8s ease-in-out infinite}
+    .blob.b2{width:220px;height:220px;background:linear-gradient(45deg,var(--accent2), #06b6d4);right:-70px;bottom:-40px;border-radius:50%;animation:float 10s ease-in-out infinite}
+    @keyframes float{0%{transform:translateY(0) rotate(0)}50%{transform:translateY(-18px) rotate(6deg)}100%{transform:translateY(0) rotate(0)}}
+
+    /* Repo list */
+    .repos{
+      background: linear-gradient(180deg, rgba(255,255,255,0.02), transparent);
+      border-radius:var(--radius);padding:18px;min-height:320px
+    }
+    .repo{display:flex;align-items:flex-start;gap:12px;padding:12px;border-radius:12px;margin-bottom:10px;background:linear-gradient(180deg, rgba(255,255,255,0.01), rgba(255,255,255,0.005));transition:transform .2s ease, box-shadow .2s ease}
+    .repo:hover{transform:translateY(-6px);box-shadow:0 10px 25px rgba(2,6,23,0.5)}
+    .repo .rmeta{font-size:13px;color:#cfe8ff}
+    .repo h3{margin:0;font-size:15px}
+    .repo p{margin:6px 0 0;font-size:13px;opacity:0.9}
+
+    /* Live fetch loader */
+    .loader{height:40px;display:flex;align-items:center;gap:8px}
+    .dot{width:9px;height:9px;border-radius:50%;background:white;opacity:0.12;animation:blink 1s infinite}
+    .dot:nth-child(2){animation-delay:.1s}.dot:nth-child(3){animation-delay:.2s}
+    @keyframes blink{0%{opacity:.12}50%{opacity:1}100%{opacity:.12}}
+
+    /* small utilities */
+    a.link{color:inherit;text-decoration:none}
+    .muted{opacity:0.7;font-size:13px}
+
+    /* responsive */
+    @media (max-width:920px){.stage{grid-template-columns:1fr;}}
+  </style>
+</head>
+<body>
+  <main class="stage">
+    <section class="profile" aria-labelledby="profile-name">
+      <div class="blobs" aria-hidden="true">
+        <div class="blob b1"></div>
+        <div class="blob b2"></div>
+      </div>
+
+      <div class="profile-head">
+        <img id="avatar" class="avatar" alt="avatar" src="https://github.com/Hiba-chokri.png" />
+        <div>
+          <h1 id="profile-name">Hiba-chokri</h1>
+          <p class="lead" id="profile-bio">Loading short bio... — attending 1337 coding school, junior data analyst &amp; software engineer</p>
+          <div class="badges" id="tech-list">
+            <!-- tech badges will be injected -->
+          </div>
+        </div>
+      </div>
+
+      <div class="stats" aria-hidden="false">
+        <div class="stat">
+          <div class="num" id="repos-count">—</div>
+          <div class="label">Repositories</div>
+        </div>
+        <div class="stat">
+          <div class="num" id="followers-count">—</div>
+          <div class="label">Followers</div>
+        </div>
+        <div class="stat">
+          <div class="num" id="following-count">—</div>
+          <div class="label">Following</div>
+        </div>
+      </div>
+
+      <div style="margin-top:14px;display:flex;gap:10px;align-items:center;justify-content:space-between">
+        <div class="muted">Profile snapshot — live from GitHub API</div>
+        <div class="loader" id="live-loader" title="fetching...">
+          <div class="dot"></div><div class="dot"></div><div class="dot"></div>
+        </div>
+      </div>
+
+      <div style="margin-top:14px;font-size:13px;opacity:0.9">Contact: <a class="link" href="mailto:hebachokri7@gmail.com">hebachokri7@gmail.com</a></div>
+
+    </section>
+
+    <section class="repos">
+      <h2 style="margin-top:0;margin-bottom:12px">Popular repositories</h2>
+      <div id="repo-list">
+        <!-- Repos injected here -->
+      </div>
+
+      <div style="margin-top:12px;font-size:13px;color:#cfe8ff;opacity:0.9">Want to see more? <a id="gh-link" class="link" href="https://github.com/Hiba-chokri" target="_blank" rel="noreferrer">Open full GitHub profile →</a></div>
+    </section>
+  </main>
+
+  <script>
+    // Friendly client-side fetch (no auth, rate-limited). We fetch public user and repo info.
+    const username = 'Hiba-chokri';
+    const apiBase = 'https://api.github.com/users/' + username;
+
+    async function fetchJSON(url){
+      try{
+        const res = await fetch(url);
+        if(!res.ok) throw new Error('HTTP ' + res.status);
+        return await res.json();
+      }catch(e){
+        console.warn('fetch failed', e);
+        return null;
+      }
+    }
+
+    async function renderProfile(){
+      const user = await fetchJSON(apiBase);
+      const loader = document.getElementById('live-loader');
+      if(user){
+        document.getElementById('profile-name').textContent = user.name || user.login || username;
+        document.getElementById('profile-bio').textContent = user.bio || 'attending 1337 coding school — junior data analyst & software engineer';
+        document.getElementById('avatar').src = user.avatar_url;
+        document.getElementById('repos-count').textContent = user.public_repos;
+        document.getElementById('followers-count').textContent = user.followers;
+        document.getElementById('following-count').textContent = user.following;
+        document.getElementById('gh-link').href = user.html_url;
+      } else {
+        document.getElementById('profile-bio').textContent = 'Could not load live profile — showing snapshot.';
+      }
+
+      // hide loader
+      loader.style.opacity = '0';
+      loader.style.transform = 'translateY(-6px)';
+    }
+
+    async function renderRepos(){
+      // fetch repos, sort by stargazers_count desc and take top 6
+      const repos = await fetchJSON(apiBase + '/repos?per_page=100');
+      const container = document.getElementById('repo-list');
+      if(!repos){
+        container.innerHTML = '<div class="muted">Failed to load repositories. Try reloading the page.</div>';
+        return;
+      }
+      repos.sort((a,b)=> (b.stargazers_count - a.stargazers_count) || new Date(b.updated_at) - new Date(a.updated_at));
+      const top = repos.slice(0,8);
+      container.innerHTML = '';
+      for(const r of top){
+        const el = document.createElement('article');
+        el.className = 'repo';
+        el.innerHTML = `
+          <div style="flex:1">
+            <h3><a class="link" target="_blank" rel="noreferrer" href="${r.html_url}">${r.name}</a></h3>
+            <p class="rmeta">${r.description ? escapeHtml(r.description) : '<span class="muted">No description</span>'}</p>
+          </div>
+          <div style="text-align:right;min-width:90px">
+            <div style="font-weight:700;font-size:14px">⭐ ${r.stargazers_count}</div>
+            <div class="muted" style="font-size:12px;margin-top:6px">${new Date(r.updated_at).toLocaleDateString()}</div>
+          </div>
+        `;
+        container.appendChild(el);
+      }
+    }
+
+    function escapeHtml(s){
+      return s.replace(/[&<>\"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+    }
+
+    // initial render
+    renderProfile();
+    renderRepos();
+
+    // small neat touch: animate title with username after profile loads
+    (async function animateTitle(){
+      const u = await fetchJSON(apiBase);
+      if(u && u.name) document.title = u.name + ' — GitHub Profile';
+    })();
+
+  </script>
+</body>
+</html>
