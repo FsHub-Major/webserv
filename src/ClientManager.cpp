@@ -7,6 +7,7 @@
 #include <cstring>
 #include <unistd.h>
 #include <arpa/inet.h>
+#include "ext_libs.hpp"
 
 // to delete, maybe not 
 #include <fcntl.h>
@@ -92,7 +93,10 @@ std::string ClientManager::readFullRequest(int socket_fd) {
             size_t cl_pos = headers.find("Content-Length: ");
             if (cl_pos != std::string::npos) {
                 size_t cl_end = headers.find("\r\n", cl_pos);
-                int content_length = atoi(headers.substr(cl_pos + 16, cl_end - cl_pos - 16).c_str());
+                std::string cl_val = headers.substr(cl_pos + 16, cl_end - cl_pos - 16);
+                cl_val = trim(cl_val, " \t\r\n");
+                int content_length = stringtoi(cl_val);
+                if (content_length < 0) content_length = 0;
                 
                 // Calculate body size
                 size_t body_start = header_end + 4;
