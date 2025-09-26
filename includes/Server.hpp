@@ -8,6 +8,9 @@
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <poll.h>
+#ifdef __linux__
+#include <sys/epoll.h>
+#endif
 #include <vector>
 #include <iostream>
 
@@ -23,6 +26,10 @@ class Server {
     bool is_init;
     // poll(2) related container rebuilt each loop for clarity
     std::vector< struct pollfd > poll_fds;
+
+#ifdef __linux__
+    int epoll_fd; // epoll instance on Linux
+#endif
 
     public:
         Server(const ServerConfig &config);
