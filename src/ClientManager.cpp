@@ -4,6 +4,7 @@
 #include "webserv.hpp"
 #include "macros.hpp"
 #include <iostream>
+#include <sstream>
 #include <cstring>
 #include <unistd.h>
 #include <arpa/inet.h>
