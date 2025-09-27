@@ -1,9 +1,7 @@
 
-
 #include "Server.hpp"
 #include "macros.hpp"
 #include "debug.hpp"
-#include <poll.h>
 
 Server::Server(const ServerConfig & config)
         : config(config), clients(config), server_fd(-1) ,is_running(false), is_init(false)
@@ -13,6 +11,9 @@ Server::Server(const ServerConfig & config)
     address.sin_addr.s_addr = inet_addr("127.0.0.1"); // localhost
     // address.sin_addr.s_addr = INADDR_ANY;
     address.sin_port = htons(config.port);
+#ifdef __linux__
+    epoll_fd = -1;
+#endif
 }
 
 Server::~Server()
@@ -52,6 +53,25 @@ bool Server::init()
         close(server_fd);
         return (false);
     } 
+#ifdef __linux__
+    // Create epoll instance and register server fd on Linux
+    epoll_fd = epoll_create(1);
+    if (epoll_fd < 0) {
+        std::cerr << "epoll_create failed" << std::endl;
+        close(server_fd);
+        return false;
+    }
+    struct epoll_event ev;
+    ev.events = EPOLLIN;
+    ev.data.fd = server_fd;
+    if (epoll_ctl(epoll_fd, EPOLL_CTL_ADD, server_fd, &ev) < 0) {
+        std::cerr << "epoll_ctl ADD server_fd failed" << std::endl;
+        close(epoll_fd);
+        epoll_fd = -1;
+        close(server_fd);
+        return false;
+    }
+#endif
     is_init = true;
     std::cout << "Server listening on port " << config.port << "...\n";
     return (true);
@@ -86,6 +106,7 @@ void Server::run() {
     is_running = true;
 
     std::cout << "Server running on port " << config.port << std::endl;
+#ifdef __APPLE__
     while (is_running)
     {
         buildPollFds();
@@ -94,9 +115,7 @@ void Server::run() {
         int ret = poll(&poll_fds[0], poll_fds.size(), 5000);
         if (ret < 0)
         {
-            if (errno == EINTR)
-                continue; // interrupted by signal
-            perror("poll failed");
+            std::cerr << "poll failed" << std::endl;
             break;
         }
         if (ret == 0)
@@ -107,6 +126,51 @@ void Server::run() {
         }
         processReadyFds();
     }
+#endif
+#ifdef __linux__
+    while (is_running)
+    {
+        // epoll timeout in milliseconds (5s)
+        const int MAX_EVENTS = 1024;
+        struct epoll_event events[MAX_EVENTS];
+        int n = epoll_wait(epoll_fd, events, MAX_EVENTS, 5000);
+        if (n < 0)
+        {
+            std::cerr << "epoll_wait failed" << std::endl;
+            break;
+        }
+        if (n == 0)
+        {
+            clients.checkTimeouts();
+            continue;
+        }
+
+        std::vector<int> readable;
+        for (int i = 0; i < n; ++i)
+        {
+            int fd = events[i].data.fd;
+            uint32_t ev = events[i].events;
+            if (fd == server_fd && (ev & EPOLLIN))
+            {
+                // Accept a single new connection per readiness indication
+                handleNewConnection();
+                continue;
+            }
+            if (ev & (EPOLLERR | EPOLLHUP))
+            {
+                clients.removeClient(fd);
+                continue;
+            }
+            if (ev & EPOLLIN)
+            {
+                readable.push_back(fd);
+            }
+        }
+        if (!readable.empty())
+            clients.processClientRequestPoll(readable);
+        clients.checkTimeouts();
+    }
+#endif
     std::cout << "Server stopped : " << config.server_name << std::endl;
 }
 
@@ -133,6 +197,18 @@ bool Server::handleNewConnection()
         close(new_socket);
         return (false);
     }
+#ifdef __linux__
+    // register new client socket with epoll
+    if (epoll_fd >= 0) {
+        struct epoll_event ev;
+        ev.events = EPOLLIN;
+        ev.data.fd = new_socket;
+        if (epoll_ctl(epoll_fd, EPOLL_CTL_ADD, new_socket, &ev) < 0) {
+            std::cerr << "epoll_ctl ADD client failed" << std::endl;
+            // We still keep the client; read loop will likely fail and clean up
+        }
+    }
+#endif
     return (true); 
 }
 
@@ -170,6 +246,12 @@ void Server::cleanup()
         close(server_fd);
         server_fd = -1;
     }
+#ifdef __linux__
+    if (epoll_fd != -1) {
+        close(epoll_fd);
+        epoll_fd = -1;
+    }
+#endif
     is_running = false;
     is_init = false;
 }

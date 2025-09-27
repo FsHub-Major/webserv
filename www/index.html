@@ -6,133 +6,326 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>WebServ - HTTP Server</title>
     <style>
+        :root {
+            --bg: #0f172a;
+            --bg-soft: #111827;
+            --text: #e5e7eb;
+            --muted: #94a3b8;
+            --primary: #3b82f6;
+            --primary-700: #2563eb;
+            --card: #111827;
+            --card-border: rgba(255,255,255,0.08);
+            --success-bg: rgba(34,197,94,0.15);
+            --success-text: #86efac;
+        }
+        :root[data-theme="light"] {
+            --bg: #f5f5f5;
+            --bg-soft: #ffffff;
+            --text: #1f2937;
+            --muted: #4b5563;
+            --primary: #007acc;
+            --primary-700: #005fa3;
+            --card: #ffffff;
+            --card-border: rgba(0,0,0,0.08);
+            --success-bg: #d4edda;
+            --success-text: #155724;
+        }
+
+        /* Animated gradient background */
         body {
-            font-family: Arial, sans-serif;
-            max-width: 800px;
-            margin: 0 auto;
-            padding: 20px;
-            background-color: #f5f5f5;
+            margin: 0;
+            min-height: 100vh;
+            font-family: system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, Noto Sans, Arial, "Apple Color Emoji", "Segoe UI Emoji";
+            color: var(--text);
+            background: linear-gradient(120deg, #0b1020, #0a1a2f, #0b1020);
+            background-size: 200% 200%;
+            animation: bgShift 16s ease infinite;
         }
+        html[data-theme="light"] body { 
+            background: linear-gradient(120deg, #eaeff7, #ffffff, #eaeff7);
+            background-size: 200% 200%;
+        }
+        @keyframes bgShift {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+
         .container {
-            background-color: white;
-            padding: 30px;
-            border-radius: 10px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            width: min(980px, 92vw);
+            margin: 0 auto;
+            padding: 28px;
         }
+
+        .card {
+            background: linear-gradient(180deg, var(--card), rgba(255,255,255,0.02));
+            border: 1px solid var(--card-border);
+            border-radius: 16px;
+            padding: 28px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.25);
+            backdrop-filter: blur(6px);
+        }
+
         h1 {
-            color: #333;
+            display: inline-flex;
+            align-items: center;
+            gap: 12px;
+            font-size: clamp(1.8rem, 2.5vw, 2.4rem);
+            margin: 0 0 10px 0;
+            letter-spacing: 0.3px;
+        }
+        .subtle {
+            color: var(--muted);
+            margin: 0 0 18px 0;
+        }
+        .divider {
+            height: 1px; border: 0; background: var(--card-border); margin: 16px 0 0 0;
+        }
+
+        .status {
+            background: var(--success-bg);
+            color: var(--success-text);
+            padding: 12px 14px;
+            border-radius: 10px;
             text-align: center;
-            border-bottom: 2px solid #007acc;
-            padding-bottom: 10px;
+            margin: 18px 0 22px 0;
+            border: 1px dashed var(--card-border);
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+            gap: 16px;
+            margin: 18px 0 8px 0;
         }
         .feature {
-            background-color: #f8f9fa;
-            padding: 15px;
-            margin: 10px 0;
-            border-left: 4px solid #007acc;
-            border-radius: 5px;
+            background: linear-gradient(180deg, rgba(59,130,246,0.08), rgba(59,130,246,0.03));
+            border: 1px solid var(--card-border);
+            border-left: 4px solid var(--primary);
+            border-radius: 10px;
+            padding: 16px;
+            transition: transform .18s ease, box-shadow .18s ease;
         }
-        .status {
-            background-color: #d4edda;
-            color: #155724;
-            padding: 10px;
-            border-radius: 5px;
-            text-align: center;
-            margin: 20px 0;
-        }
-        .code {
-            background-color: #f1f1f1;
-            padding: 10px;
-            border-radius: 5px;
-            font-family: 'Courier New', monospace;
-            margin: 10px 0;
-        }
+        .feature:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(0,0,0,0.25); }
+        .feature h3 { margin: 0 0 6px 0; }
+        .feature p { margin: 0; color: var(--muted); }
+
         .authors {
-            background-color: #e8f4f8;
-            padding: 20px;
-            border-radius: 8px;
+            background: linear-gradient(180deg, rgba(17,24,39,0.6), rgba(17,24,39,0.4));
+            border: 1px solid var(--card-border);
+            padding: 22px;
+            border-radius: 12px;
             text-align: center;
             margin: 20px 0;
-            border: 2px solid #007acc;
         }
-        .author-name {
-            display: inline-block;
-            margin: 0 15px;
-            font-weight: bold;
-            color: #007acc;
+        /* Author buttons */
+        .author-buttons { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; }
+        .author-button {
+            display: inline-block; padding: 8px 12px; background-color: var(--primary); color: #fff; text-decoration: none; border-radius: 8px; font-weight: 600;
+            transition: background-color 0.2s ease-in-out, transform .15s ease;
         }
+        .author-button:hover { background-color: var(--primary-700); transform: translateY(-1px); }
+
+        .code {
+            position: relative;
+            background: #0b1220;
+            border: 1px solid var(--card-border);
+            padding: 12px 14px;
+            border-radius: 10px;
+            font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+            color: #e2e8f0;
+            overflow-x: auto;
+        }
+        .copy-btn {
+            position: absolute; top: 8px; right: 8px; padding: 6px 10px; font-size: 12px; border: 1px solid var(--card-border);
+            border-radius: 6px; background: rgba(255,255,255,0.06); color: var(--text); cursor: pointer; transition: opacity .15s ease;
+        }
+        .copy-btn:hover { opacity: .9; }
+
+        .kbd { display: inline-block; padding: 2px 6px; border: 1px solid var(--card-border); border-radius: 6px; background: rgba(255,255,255,0.06); font-size: 12px; }
+
+        /* Accordion */
+        .accordion { border: 1px solid var(--card-border); border-radius: 10px; overflow: hidden; }
+        .accordion-item + .accordion-item { border-top: 1px solid var(--card-border); }
+        .accordion-header { display:flex; justify-content: space-between; align-items:center; padding: 14px 16px; background: rgba(255,255,255,0.04); cursor: pointer; }
+        .accordion-header h3 { margin: 0; font-size: 16px; }
+        .accordion-body { max-height: 0; overflow: hidden; transition: max-height .25s ease; background: rgba(255,255,255,0.02); }
+        .accordion-body-inner { padding: 0 16px 16px 16px; color: var(--muted); }
+        .accordion-item.open .accordion-body { max-height: 500px; }
+
+        /* Top bar */
+    .topbar { display:flex; justify-content: space-between; align-items: center; margin: 0 0 14px 0; }
+    .top-actions { display:flex; align-items:center; gap:10px; }
+        .toggle-theme { border: 1px solid var(--card-border); background: rgba(255,255,255,0.06); color: var(--text); padding: 6px 10px; border-radius: 8px; cursor: pointer; }
+
+        /* Reveal on scroll */
+        .reveal { opacity: 0; transform: translateY(10px); transition: opacity .4s ease, transform .4s ease; }
+        .reveal-visible { opacity: 1; transform: translateY(0); }
     </style>
 </head>
 <body>
-    <div class="container">
-        <h1>🚀 WebServ HTTP Server</h1>
-        
-        <div class="status">
-            ✅ Server is running successfully!
+    <div class="container" id="root">
+        <div class="topbar">
+            <h1>🚀 WebServ HTTP Server</h1>
+            <div class="top-actions">
+                <a class="author-button" href="./login.html">Login</a>
+                <button class="toggle-theme" id="toggleTheme" title="Toggle theme">🌗 Theme</button>
+            </div>
         </div>
+        <p class="subtle">A tiny, event‑driven HTTP/1.1 server written in modern C++ with cross‑platform I/O (poll on macOS, epoll on Linux).</p>
+        <div class="status">✅ Server is running successfully!</div>
 
-        <div class="authors">
+        <div class="authors card reveal">
             <h3>👥 Project Authors</h3>
-            <p>
-                <span class="author-name">Ayoub Elmohamedi</span> •
-                <span class="author-name">Hiba Chokri</span> •
-                <span class="author-name">Yassir Sbai</span>
+            <p class="author-buttons">
+                <a class="author-button" href="https://github.com/ayoubelmohamedi" target="_blank" rel="noopener noreferrer">Ayoub Elmohamedi</a>
+                <a class="author-button" href="./Hiba_chokri.html">Hiba Chokri</a>
+                <a class="author-button" href="https://github.com/VICTORxEVO" target="_blank" rel="noopener noreferrer">Yassir Sbai</a>
             </p>
         </div>
 
         <h2>📋 Server Features</h2>
-        
-        <div class="feature">
-            <h3>🔄 I/O Multiplexing</h3>
-            <p>Uses <code>select()</code> system call for efficient handling of multiple client connections without threading.</p>
-        </div>
 
-        <div class="feature">
-            <h3>⚡ Non-blocking I/O</h3>
-            <p>Single-threaded event-driven architecture for high performance and low resource usage.</p>
-        </div>
-
-        <div class="feature">
-            <h3>🔧 Configuration</h3>
-            <p>Configurable port settings via <code>server.conf</code> file.</p>
-        </div>
-
-        <div class="feature">
-            <h3>⏰ Client Timeouts</h3>
-            <p>Automatic cleanup of inactive connections after 30 seconds.</p>
+        <div class="grid">
+            <div class="feature card reveal">
+                <h3>🔄 I/O Multiplexing</h3>
+                <p>Cross‑platform readiness polling: <span class="kbd">poll()</span> on macOS and <span class="kbd">epoll</span> on Linux for scalable, non‑blocking I/O.</p>
+            </div>
+            <div class="feature card reveal">
+                <h3>⚡ Single‑threaded</h3>
+                <p>Event‑driven loop avoids thread overhead; clean state machine with minimal context switching.</p>
+            </div>
+            <div class="feature card reveal">
+                <h3>🧱 Static files</h3>
+                <p>Serves files from <span class="kbd">www/</span> with basic content‑type detection and index file fallback.</p>
+            </div>
+            <div class="feature card reveal">
+                <h3>🧭 Request pipeline</h3>
+                <p><span class="kbd">readFullRequest → HttpRequest::parseRequest → HttpResponse::createResponse</span></p>
+            </div>
         </div>
 
         <h2>📊 Server Info</h2>
-        <div class="code">
-            Max Clients: 20<br>
-            Timeout: 30 seconds<br>
-            Protocol: HTTP/1.1<br>
-            Architecture: Event-driven
+        <div class="code card reveal">
+            <button class="copy-btn" data-copy="#info">Copy</button>
+            <div id="info">
+                Max Clients: 20<br>
+                Timeout: 10 seconds<br>
+                Protocol: HTTP/1.1<br>
+                Architecture: Event‑driven (poll/epoll)
+            </div>
         </div>
 
         <h2>🧪 Test Commands</h2>
-        <div class="code">
-            # Test with curl:<br>
-            curl http://localhost:8080<br><br>
-            
-            # Test with telnet:<br>
-            telnet localhost 8080<br><br>
-            
-            # Multiple connections:<br>
-            ./spawnTest
+        <div class="code card reveal">
+            <button class="copy-btn" data-copy="#tests">Copy</button>
+            <pre id="tests"># Fetch index
+curl -i http://127.0.0.1:8080/
+
+# Request a missing file (expect 404)
+curl -i http://127.0.0.1:8080/missing.txt
+
+# Open a raw TCP session
+telnet 127.0.0.1 8080
+
+# Simulate many clients (if available)
+./tests/bin/spawnTest</pre>
+        </div>
+
+        <h2>🧭 HTTP Lifecycle</h2>
+        <div class="accordion card reveal" id="lifecycle">
+            <div class="accordion-item open">
+                <div class="accordion-header"><h3>1) Accept & read</h3><span>▾</span></div>
+                <div class="accordion-body"><div class="accordion-body-inner">
+                    New connections are accepted, then <span class="kbd">readFullRequest</span> accumulates bytes until headers end (<span class="kbd">\r\n\r\n</span>) and, if present, the full body per <span class="kbd">Content-Length</span>.
+                </div></div>
+            </div>
+            <div class="accordion-item">
+                <div class="accordion-header"><h3>2) Parse</h3><span>▾</span></div>
+                <div class="accordion-body"><div class="accordion-body-inner">
+                    <span class="kbd">HttpRequest::parseRequest</span> extracts method, URI, version, headers, and query params.
+                </div></div>
+            </div>
+            <div class="accordion-item">
+                <div class="accordion-header"><h3>3) Route & respond</h3><span>▾</span></div>
+                <div class="accordion-body"><div class="accordion-body-inner">
+                    <span class="kbd">HttpResponse::createResponse</span> dispatches by method:
+                    <ul>
+                        <li><strong>GET</strong> — serves static files under <span class="kbd">www/</span></li>
+                        <li><strong>POST / DELETE</strong> — currently return <span class="kbd">501 Not Implemented</span></li>
+                        <li>Others — <span class="kbd">405 Method Not Allowed</span></li>
+                    </ul>
+                </div></div>
+            </div>
+            <div class="accordion-item">
+                <div class="accordion-header"><h3>4) Close</h3><span>▾</span></div>
+                <div class="accordion-body"><div class="accordion-body-inner">
+                    Connection is closed after response (simple, per‑request model). Idle connections are timed‑out automatically.
+                </div></div>
+            </div>
         </div>
 
         <h2>🎯 Implementation Highlights</h2>
-        <ul>
-            <li><strong>select() multiplexing</strong> - handles multiple clients efficiently</li>
-            <li><strong>No thread context switching</strong> - CPU efficient</li>
-            <li><strong>Kernel-based event notification</strong> - relies on OS efficiency</li>
-            <li><strong>Process sleeps until activity</strong> - power efficient</li>
+        <ul class="card reveal" style="padding:16px; border-radius:12px; border:1px solid var(--card-border); list-style: disc inside;">
+            <li><strong>poll/epoll multiplexing</strong> — scalable, event‑driven I/O</li>
+            <li><strong>Static file server</strong> — content‑type guessing, index fallback</li>
+            <li><strong>Small core</strong> — minimal abstractions for clarity and learning</li>
+            <li><strong>Extensible</strong> — clean separation of request parsing and response building</li>
         </ul>
 
-        <footer style="text-align: center; margin-top: 30px; color: #666;">
+        <footer class="subtle" style="text-align: center; margin-top: 30px;">
             <p>Built from scratch in C++ • 2025</p>
         </footer>
     </div>
+    <script>
+    (function(){
+        // Theme toggle on <html>
+        const docEl = document.documentElement;
+        const btn = document.getElementById('toggleTheme');
+        const saved = localStorage.getItem('theme');
+        if (saved) docEl.setAttribute('data-theme', saved);
+        btn.addEventListener('click', () => {
+            const current = docEl.getAttribute('data-theme') || 'dark';
+            const next = current === 'light' ? 'dark' : 'light';
+            docEl.setAttribute('data-theme', next);
+            localStorage.setItem('theme', next);
+        });
+
+        // Accordion
+        document.querySelectorAll('.accordion .accordion-header').forEach(h => {
+            h.addEventListener('click', () => {
+                const item = h.parentElement;
+                item.classList.toggle('open');
+            });
+        });
+
+        // Copy buttons
+        document.querySelectorAll('.copy-btn').forEach(btn => {
+            btn.addEventListener('click', async () => {
+                const target = document.querySelector(btn.getAttribute('data-copy'));
+                if (!target) return;
+                try {
+                    await navigator.clipboard.writeText(target.innerText);
+                    btn.textContent = 'Copied!';
+                    setTimeout(() => btn.textContent = 'Copy', 1200);
+                } catch (e) {
+                    btn.textContent = 'Copy failed';
+                    setTimeout(() => btn.textContent = 'Copy', 1200);
+                }
+            });
+        });
+
+        // Scroll reveal
+        const io = new IntersectionObserver((entries) => {
+            entries.forEach(e => {
+                if (e.isIntersecting) {
+                    e.target.classList.add('reveal-visible');
+                    io.unobserve(e.target);
+                }
+            });
+        }, { threshold: 0.15 });
+        document.querySelectorAll('.reveal').forEach(el => io.observe(el));
+    })();
+    </script>
 </body>
 </html>

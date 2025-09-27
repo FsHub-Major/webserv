@@ -7,9 +7,7 @@
 #include <cstring>
 #include <unistd.h>
 #include <arpa/inet.h>
-
-// to delete, maybe not 
-#include <fcntl.h>
+#include "ext_libs.hpp"
 
 ClientManager::ClientManager(const ServerConfig & config) : config(config) {
 
@@ -62,8 +60,9 @@ void ClientManager::removeClient(int socket_fd) {
 }
 
 
-int ClientManager::getClientCount() const {
-    return (clients.size()); // cast to int ?  
+int ClientManager::getClientCount() const
+{
+    return static_cast<int>(clients.size());
 }
 
 bool ClientManager::isFull() const {
@@ -73,46 +72,41 @@ bool ClientManager::isFull() const {
 std::string ClientManager::readFullRequest(int socket_fd) {
     std::string request;
     char buffer[BUFF_SIZE];
-    
-    while (true) {
-        int valread = read(socket_fd, buffer, sizeof(buffer));
-        if (valread <= 0) {
-            return "";  // Connection closed or error
+    for (;;) {
+        int n = read(socket_fd, buffer, sizeof(buffer));
+        if (n <= 0) return ""; // connection closed or error
+
+        request.append(buffer, n);
+
+        size_t header_end = request.find("\r\n\r\n");
+        if (header_end == std::string::npos) continue; // keep reading headers
+
+        // If Content-Length present, ensure we have the whole body
+        const std::string headers = request.substr(0, header_end);
+        size_t cl_pos = headers.find("Content-Length: ");
+        if (cl_pos != std::string::npos) {
+            size_t cl_end = headers.find("\r\n", cl_pos);
+            std::string cl_val = headers.substr(cl_pos + 16, cl_end - cl_pos - 16);
+            cl_val = trim(cl_val, " \t\r\n");
+            int content_length = stringtoi(cl_val);
+            if (content_length < 0) content_length = 0;
+
+            size_t body_start = header_end + 4;
+            size_t have = request.size() - body_start;
+            if (have < static_cast<size_t>(content_length)) continue; // need more
         }
-        
-        request.append(buffer, valread);
-        
-        // Check if headers are complete (double CRLF)
-        if (request.find("\r\n\r\n") != std::string::npos) {
-            // Check if body is complete (if Content-Length present)
-            size_t header_end = request.find("\r\n\r\n");
-            std::string headers = request.substr(0, header_end);
-            
-            // Extract Content-Length
-            size_t cl_pos = headers.find("Content-Length: ");
-            if (cl_pos != std::string::npos) {
-                size_t cl_end = headers.find("\r\n", cl_pos);
-                int content_length = stringtoi(headers.substr(cl_pos + 16, cl_end - cl_pos - 16));
-                
-                // Calculate body size
-                size_t body_start = header_end + 4;
-                size_t current_body_size = request.size() - body_start;
-                
-                if (current_body_size < (size_t)content_length) {
-                    continue; 
-                }
-            }
-            
-            return request;
-        }
+        return request;
     }
 }
 
 // poll variant: readable_fds are those with POLLIN ready
-void ClientManager::processClientRequestPoll(const std::vector<int>& readable_fds) {
+void ClientManager::processClientRequestPoll(const std::vector<int>& readable_fds)
+{
+    HttpRequest request;
+    std::string response;
+
     for (size_t i = 0; i < readable_fds.size(); ++i) {
         int socket_fd = readable_fds[i];
-
 
         std::string raw_request = readFullRequest(socket_fd);
 
@@ -122,18 +116,14 @@ void ClientManager::processClientRequestPoll(const std::vector<int>& readable_fd
             continue;
         }
 
-        
         std::cout << "RAW REQUEST" << std::endl;
         std::cout << raw_request << std::endl;
-        HttpRequest request;
-        std::string response;
         if (request.parseRequest(raw_request, this->config.root))
             response = HttpResponse::createResponse(request, this->config);
         else
             response = "HTTP/1.0 400 Bad Request\r\n\r\n";
 
-        ssize_t sent = send(socket_fd , response.c_str(), response.length(), 0);
-        if (sent == -1)
+        if (send(socket_fd , response.c_str(), response.length(), 0) < 0)
         {
             std::cerr << "Send failed for socket " << socket_fd << std::endl;
             removeClient(socket_fd);
@@ -165,19 +155,15 @@ void ClientManager::checkTimeouts()
 {
     time_t current_time = time(NULL);
     std::map<int, Client>::iterator it = clients.begin();
-    while (it != clients.end())
-    {
-        if (current_time - it->second.last_activity > CLIENT_TIMEOUT)
-        {
+    while (it != clients.end()) {
+        if (current_time - it->second.last_activity > CLIENT_TIMEOUT) {
             printf("Client timeout: socket fd %d\n", it->first);
             int socket_fd = it->first;
             ++it;
             removeClient(socket_fd);
-        }
-        else{
+        } else {
             ++it;
         }
-
     }
 }
 
