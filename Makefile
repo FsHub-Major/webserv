@@ -4,6 +4,8 @@ NAME =  webserv
 # C++ compiler with all flags
 CXX = c++
 CXXFLAGS = -std=c++98 -Wall -Wextra -Werror -g
+## Allow extra flags from wrapper targets
+CXXFLAGS += $(EXTRA_FLAGS)
 
 # Directories
 OBJ_DIR = objects
@@ -50,4 +52,18 @@ re: fclean all
 clear: all clean
 
 bclear: all clean
+
+# ------------------------------------------------------
+# Simulation targets (toggle OS macros at compile time)
+# ------------------------------------------------------
+.PHONY: sim-macos sim-linux
+
+# Simulate macOS build on any host: enable __APPLE__, disable __linux__
+sim-macos: clean
+	@$(MAKE) EXTRA_FLAGS="-D__APPLE__ -U__linux__" all
+
+# Simulate Linux build on any host: enable __linux__, disable __APPLE__
+# NOTE: On macOS this will likely fail without Linux headers/toolchain.
+sim-linux: clean
+	@$(MAKE) EXTRA_FLAGS="-D__linux__ -U__APPLE__" all
 
