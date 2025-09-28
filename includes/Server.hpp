@@ -45,6 +45,16 @@ class Server {
     bool handleNewConnection();
     void buildPollFds();
     void processReadyFds();
+    
+#ifdef __APPLE__
+    void runWithPoll(); // Event loop using poll() for macOS
+#endif
+#ifdef __linux__
+    bool initEpoll(); // Initialize epoll instance and register server socket
+    void runWithEpoll(); // Event loop using epoll for Linux
+    void processEpollEvents(struct epoll_event* events, int count); // Process epoll events
+    void registerClientWithEpoll(int socket_fd); // Register client socket with epoll
+#endif
 
         int getPort() const;
         int getServerFd() const;
