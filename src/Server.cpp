@@ -30,28 +30,31 @@ bool Server::init()
     
     // Create TCP socket
     server_fd = socket(AF_INET, SOCK_STREAM, 0);
-    if (server_fd == -1) {
+    if (server_fd == -1)
+    {
         perror("socket creation failed");
-        return false;
+        return (false);
     }
-
     // Enable address reuse to prevent "Address already in use" errors
     int opt = 1;
-    if (setsockopt(server_fd, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt)) < 0) {
+    if (setsockopt(server_fd, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt)) < 0)
+    {
         perror("setsockopt failed");
         close(server_fd);
         return false;
     }
 
     // Bind socket to the configured address and port
-    if (::bind(server_fd, reinterpret_cast<sockaddr*>(&address), sizeof(address)) == -1) {
+    if (::bind(server_fd, reinterpret_cast<sockaddr*>(&address), sizeof(address)) == -1)
+    {
         perror("bind");
         close(server_fd);
         return false;
     }
 
     // Start listening with backlog queue size of 128 (pending connections)
-    if (listen(server_fd, 128) == -1) {
+    if (listen(server_fd, 128) == -1)
+    {
         perror("listen");
         close(server_fd);
         return false;
@@ -75,7 +78,8 @@ bool Server::init()
 bool Server::initEpoll()
 {
     epoll_fd = epoll_create(1);
-    if (epoll_fd < 0) {
+    if (epoll_fd < 0)
+    {
         std::cerr << "epoll_create failed" << std::endl;
         return false;
     }
@@ -84,7 +88,8 @@ bool Server::initEpoll()
     ev.events = EPOLLIN;
     ev.data.fd = server_fd;
     
-    if (epoll_ctl(epoll_fd, EPOLL_CTL_ADD, server_fd, &ev) < 0) {
+    if (epoll_ctl(epoll_fd, EPOLL_CTL_ADD, server_fd, &ev) < 0)
+    {
         std::cerr << "epoll_ctl ADD server_fd failed" << std::endl;
         close(epoll_fd);
         epoll_fd = -1;
@@ -107,14 +112,16 @@ void Server::buildPollFds()
 
     // Add all client sockets for reading
     for (std::map<int, Client>::const_iterator it = clients.clientsBegin(); 
-         it != clients.clientsEnd(); ++it) {
+         it != clients.clientsEnd(); ++it)
+    {
         struct pollfd client_pfd = {it->first, POLLIN, 0};
         poll_fds.push_back(client_pfd);
     }
 }
 
 void Server::run() {
-    if (!is_init) {
+    if (!is_init)
+    {
         std::cerr << "Server not initialized" << std::endl;
         return;
     }
@@ -139,16 +146,19 @@ void Server::runWithPoll()
 {
     const int TIMEOUT_MS = 5000; // 5 second timeout
     
-    while (is_running) {
+    while (is_running)
+    {
         buildPollFds();
 
         int ret = poll(&poll_fds[0], poll_fds.size(), TIMEOUT_MS);
-        if (ret < 0) {
+        if (ret < 0)
+        {
             std::cerr << "poll failed" << std::endl;
             break;
         }
         
-        if (ret == 0) {
+        if (ret == 0)
+        {
             // Timeout - check for inactive clients
             clients.checkTimeouts();
             continue;
@@ -166,15 +176,19 @@ void Server::runWithEpoll()
     const int MAX_EVENTS = 1024;
     const int TIMEOUT_MS = 5000; // 5 second timeout
     struct epoll_event events[MAX_EVENTS];
+    int n;
     
-    while (is_running) {
-        int n = epoll_wait(epoll_fd, events, MAX_EVENTS, TIMEOUT_MS);
-        if (n < 0) {
+    while (is_running)
+    {
+        n = epoll_wait(epoll_fd, events, MAX_EVENTS, TIMEOUT_MS);
+        if (n < 0)
+        {
             std::cerr << "epoll_wait failed" << std::endl;
             break;
         }
         
-        if (n == 0) {
+        if (n == 0)
+        {
             clients.checkTimeouts();
             continue;
         }
@@ -188,24 +202,27 @@ void Server::runWithEpoll()
 void Server::processEpollEvents(struct epoll_event* events, int count)
 {
     std::vector<int> readable;
-    
-    for (int i = 0; i < count; ++i) {
-        int fd = events[i].data.fd;
+    int fd;
+
+    for (int i = 0; i < count; ++i)
+    {
+        fd = events[i].data.fd;
         uint32_t event_flags = events[i].events;
         
-        if (fd == server_fd && (event_flags & EPOLLIN)) {
+        if (fd == server_fd && (event_flags & EPOLLIN))
+        {
             handleNewConnection();
             continue;
         }
         
-        if (event_flags & (EPOLLERR | EPOLLHUP)) {
+        if (event_flags & (EPOLLERR | EPOLLHUP))
+        {
             clients.removeClient(fd);
             continue;
         }
         
-        if (event_flags & EPOLLIN) {
+        if (event_flags & EPOLLIN)
             readable.push_back(fd);
-        }
     }
     
     if (!readable.empty()) {
@@ -223,7 +240,8 @@ bool Server::handleNewConnection()
     socklen_t client_len = sizeof(client_addr);
 
     int new_socket = accept(server_fd, (struct sockaddr*) &client_addr, &client_len);
-    if (new_socket < 0) {
+    if (new_socket < 0)
+    {
         perror("accept failed");
         return false;
     }
@@ -232,7 +250,8 @@ bool Server::handleNewConnection()
            new_socket, inet_ntoa(client_addr.sin_addr), ntohs(client_addr.sin_port));
     
     // Try to add client to manager
-    if (!clients.addClient(new_socket, client_addr)) {
+    if (!clients.addClient(new_socket, client_addr))
+    {
         std::cerr << "Failed to add client - server full" << std::endl;
         close(new_socket);
         return false;
@@ -249,12 +268,14 @@ bool Server::handleNewConnection()
 
 void Server::registerClientWithEpoll(int socket_fd)
 {
-    if (epoll_fd >= 0) {
+    if (epoll_fd >= 0)
+    {
         struct epoll_event ev;
         ev.events = EPOLLIN;
         ev.data.fd = socket_fd;
         
-        if (epoll_ctl(epoll_fd, EPOLL_CTL_ADD, socket_fd, &ev) < 0) {
+        if (epoll_ctl(epoll_fd, EPOLL_CTL_ADD, socket_fd, &ev) < 0)
+        {
             std::cerr << "epoll_ctl ADD client failed" << std::endl;
             // Continue anyway; read loop will handle failure and cleanup
         }
@@ -269,21 +290,21 @@ void Server::processReadyFds()
         return;
         
     // Check server socket for new connections (index 0)
-    if (poll_fds[0].revents & POLLIN) {
+    if (poll_fds[0].revents & POLLIN)
         handleNewConnection();
-    }
     
     // Process client sockets (starting from index 1)
     std::vector<int> readable;
-    for (size_t i = 1; i < poll_fds.size(); ++i) {
-        if (poll_fds[i].revents & (POLLERR | POLLHUP | POLLNVAL)) {
+    for (size_t i = 1; i < poll_fds.size(); ++i)
+    {
+        if (poll_fds[i].revents & (POLLERR | POLLHUP | POLLNVAL))
+        {
             clients.removeClient(poll_fds[i].fd);
             continue;
         }
         
-        if (poll_fds[i].revents & POLLIN) {
+        if (poll_fds[i].revents & POLLIN)
             readable.push_back(poll_fds[i].fd);
-        }
     }
     
     if (!readable.empty()) {
@@ -297,13 +318,15 @@ void Server::processReadyFds()
 
 void Server::cleanup()
 {
-    if (server_fd != -1) {
+    if (server_fd != -1)
+    {
         close(server_fd);
         server_fd = -1;
     }
     
 #ifdef __linux__
-    if (epoll_fd != -1) {
+    if (epoll_fd != -1)
+    {
         close(epoll_fd);
         epoll_fd = -1;
     }
@@ -314,22 +337,25 @@ void Server::cleanup()
 }
 
 // Getter methods
-int Server::getPort() const {
+int Server::getPort() const
+{
     return config.port;
 }
 
-int Server::getServerFd() const {
+int Server::getServerFd() const
+{
     return server_fd;
 }
 
-bool Server::isRunning() const {
+bool Server::isRunning() const
+{
     return is_running;
 }
 
-bool Server::isInitialized() const {
+bool Server::isInitialized() const
+{
     return is_init;
 }
-
 
 void Server::stop()
 {
