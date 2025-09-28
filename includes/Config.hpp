@@ -6,7 +6,8 @@
 #include <vector>
 #include <map>
 
-struct LocationConfig {
+struct LocationConfig
+{
     std::string path;
     std::vector<std::string> allowed_methods;
     bool autoindex;
@@ -15,7 +16,8 @@ struct LocationConfig {
     std::string cgi_path;
 };
 
-struct ServerConfig {
+struct ServerConfig
+{
     int port;
     std::string server_name;
     std::string root;
@@ -26,7 +28,8 @@ struct ServerConfig {
     std::vector<LocationConfig> locations;
 };
 
-class Config {
+class Config
+{
 private:
     std::vector<ServerConfig> servers;
     

@@ -15,7 +15,8 @@
 int load_port(const std::string& path)
 {
     std::ifstream cfg(path.c_str());
-    if (!cfg.is_open()) {
+    if (!cfg.is_open())
+    {
         std::cerr << "Failed to open config file: " << path << "\n";
         return -1;
     }
@@ -24,12 +25,13 @@ int load_port(const std::string& path)
     tokens.reserve(10); // Pre-allocate to avoid reallocations
     std::string line;
     
-    while (std::getline(cfg, line)) {
+    while (std::getline(cfg, line))
+    {
         tokens = split(line, " =");
-        for (size_t i = 0; i + 1 < tokens.size(); ++i) {
-            if (tokens[i] == "port") {
-                return stringtoi(tokens[i + 1]);
-            }
+        for (size_t i = 0; i + 1 < tokens.size(); ++i)
+        {
+            if (tokens[i] == "port")
+                return (stringtoi(tokens[i + 1]));
         }
         tokens.clear(); // Clear for next line
     }
@@ -48,23 +50,26 @@ ServerConfig initializeServerConfig()
     server_config.client_timeout = CLIENT_TIMEOUT;
     server_config.client_max_body_size = 1024 * 1024; // 1MB default
     
-    return server_config;
+    return (server_config);
 }
 
 
 int main(int ac, char* av[])
 {
+    ServerConfig server_config;
+
     (void)av; // Suppress unused parameter warnings
     (void)ac;
     
     try
     {
-        ServerConfig server_config = initializeServerConfig();
+        server_config = initializeServerConfig();
         
         Server server(server_config);
-        if (!server.init()) { 
+        if (!server.init())
+        { 
             std::cerr << "Failed to initialize server on port " << server_config.port << std::endl;
-            return 1;
+            return (1);
         }
         
         std::cout << "Server initialized successfully" << std::endl;
@@ -73,9 +78,9 @@ int main(int ac, char* av[])
     catch (const std::exception& e)
     {
         std::cerr << "Error: " << e.what() << std::endl;
-        return 1;
+        return (1);
     }
 
     std::cout << "Server shutdown completed successfully" << std::endl;
-    return 0;
+    return (0);
 }
