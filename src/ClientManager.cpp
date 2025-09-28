@@ -9,23 +9,24 @@
 #include <unistd.h>
 #include <arpa/inet.h>
 
-ClientManager::ClientManager(const ServerConfig & config) : config(config) {
+ClientManager::ClientManager(const ServerConfig & config) : config(config)
+{
     std::cout << " ClientManager Constructor called" << std::endl;
 }
 
-ClientManager::~ClientManager() {
-    for (std::map<int, Client>::iterator it = clients.begin(); it != clients.end(); ++it) {
+ClientManager::~ClientManager()
+{
+    for (std::map<int, Client>::iterator it = clients.begin(); it != clients.end(); ++it)
         close(it->first); 
-    }
     clients.clear();
     std::cout << " ~ClientManager called" << std::endl;
 }
 
-
 bool ClientManager::addClient(int socket_fd, const struct sockaddr_in& addr) {
-    if (isFull()) {
+    if (isFull())
+    {
         std::cerr << "ClientManager: Maximum clients reached (" << MAX_CLIENTS << ")" << std::endl;
-        return false;
+        return (false);
     }
     
     // Initialize new client with current timestamp
@@ -41,12 +42,14 @@ bool ClientManager::addClient(int socket_fd, const struct sockaddr_in& addr) {
            socket_fd, inet_ntoa(addr.sin_addr), ntohs(addr.sin_port), 
            getClientCount());
     
-    return true;
+    return (true);
 }
 
-void ClientManager::removeClient(int socket_fd) {
+void ClientManager::removeClient(int socket_fd)
+{
     std::map<int, Client>::iterator it = clients.find(socket_fd);
-    if (it != clients.end()) {
+    if (it != clients.end())
+    {
         printf("Client disconnected: socket fd %d, IP %s, port %d (remaining: %d)\n",
                it->first,
                inet_ntoa(it->second.address.sin_addr),
@@ -60,45 +63,52 @@ void ClientManager::removeClient(int socket_fd) {
 
 
 // Simple getter methods
-int ClientManager::getClientCount() const {
+int ClientManager::getClientCount() const
+{
     return static_cast<int>(clients.size());
 }
 
-bool ClientManager::isFull() const {
+bool ClientManager::isFull() const
+{
     return clients.size() >= MAX_CLIENTS;
 }
 
-std::string ClientManager::readFullRequest(int socket_fd) {
-    std::string request;
-    char buffer[BUFF_SIZE];
-    
+std::string ClientManager::readFullRequest(int socket_fd)
+{
+    std::string req;
+    char buf[BUFF_SIZE];
+    size_t body_start;
+    size_t hdr_end;
+    size_t cl_pos;
+    size_t val_end;
+    int len;
+
     for (;;) {
-        int bytes_read = read(socket_fd, buffer, sizeof(buffer));
-        if (bytes_read <= 0) return ""; // Connection closed or error
+        int n = read(socket_fd, buf, sizeof(buf));
+        if (n <= 0)
+            return ("");
+        req.append(buf, n);
 
-        request.append(buffer, bytes_read);
+        hdr_end = req.find("\r\n\r\n");
+        if (hdr_end == std::string::npos) continue;
 
-        // Look for end of HTTP headers
-        size_t header_end = request.find("\r\n\r\n");
-        if (header_end == std::string::npos) continue; // Keep reading headers
+        // No body or no Content-Length header => done
+        cl_pos = req.find("Content-Length:");
+        if (cl_pos == std::string::npos || cl_pos > hdr_end)
+            return (req);
 
-        // Check if request has body with Content-Length
-        const std::string headers = request.substr(0, header_end);
-        size_t cl_pos = headers.find("Content-Length: ");
-        if (cl_pos != std::string::npos) {
-            // Extract and parse Content-Length value
-            size_t cl_end = headers.find("\r\n", cl_pos);
-            std::string cl_val = headers.substr(cl_pos + 16, cl_end - cl_pos - 16);
-            cl_val = trim(cl_val, " \t\r\n");
-            int content_length = stringtoi(cl_val);
-            if (content_length < 0) content_length = 0;
+        // Parse Content-Length value within headers
+        size_t val_start = cl_pos + 15; // strlen("Content-Length:")
+        while (val_start < hdr_end && (req[val_start] == ' ' || req[val_start] == '\t'))
+            ++val_start;
+        val_end = req.find("\r\n", val_start);
+        if (val_end == std::string::npos || val_end > hdr_end) val_end = hdr_end;
+        len = stringtoi(trim(req.substr(val_start, val_end - val_start), " \t\r\n"));
+        if (len < 0) len = 0;
 
-            // Ensure we have the complete body
-            size_t body_start = header_end + 4;
-            size_t body_received = request.size() - body_start;
-            if (body_received < static_cast<size_t>(content_length)) continue; // Need more data
-        }
-        return request;
+        body_start = hdr_end + 4;
+        if (req.size() - body_start >= static_cast<size_t>(len))
+            return (req);
     }
 }
 
@@ -107,12 +117,14 @@ void ClientManager::processClientRequestPoll(const std::vector<int>& readable_fd
     HttpRequest request;
     std::string response;
 
-    for (size_t i = 0; i < readable_fds.size(); ++i) {
+    for (size_t i = 0; i < readable_fds.size(); ++i)
+    {
         int socket_fd = readable_fds[i];
 
         // Read complete HTTP request
         std::string raw_request = readFullRequest(socket_fd);
-        if (raw_request.empty()) {
+        if (raw_request.empty())
+        {
             removeClient(socket_fd);
             continue;
         }
@@ -121,24 +133,24 @@ void ClientManager::processClientRequestPoll(const std::vector<int>& readable_fd
         std::cout << raw_request << std::endl;
         
         // Parse request and generate response
-        if (request.parseRequest(raw_request, this->config.root)) {
+        if (request.parseRequest(raw_request, this->config.root))
             response = HttpResponse::createResponse(request, this->config);
-        } else {
+        else
             response = "HTTP/1.0 400 Bad Request\r\n\r\n";
-        }
 
         // Send response to client
-        if (send(socket_fd, response.c_str(), response.length(), 0) < 0) {
+        if (send(socket_fd, response.c_str(), response.length(), 0) < 0)
+        {
             std::cerr << "Send failed for socket " << socket_fd << std::endl;
             removeClient(socket_fd);
             continue;
         }
-        
         updateActivity(socket_fd);
     }
 }
 
-void ClientManager::sendHttpResponse(int socket_fd) {
+void ClientManager::sendHttpResponse(int socket_fd)
+{
     const std::string http_response = 
         "HTTP/1.1 200 OK\r\n"
         "Content-Type: text/html\r\n"
@@ -149,11 +161,11 @@ void ClientManager::sendHttpResponse(int socket_fd) {
 }
 
 
-void ClientManager::updateActivity(int socket_fd) {
+void ClientManager::updateActivity(int socket_fd)
+{
     std::map<int, Client>::iterator it = clients.find(socket_fd);
-    if (it != clients.end()) {
+    if (it != clients.end())
         it->second.last_activity = time(NULL);
-    }
 }
 
 
@@ -163,14 +175,15 @@ void ClientManager::checkTimeouts()
     std::map<int, Client>::iterator it = clients.begin();
     
     while (it != clients.end()) {
-        if (current_time - it->second.last_activity > CLIENT_TIMEOUT) {
+        if (current_time - it->second.last_activity > CLIENT_TIMEOUT)
+        {
             printf("Client timeout: socket fd %d\n", it->first);
             int socket_fd = it->first;
             ++it; // Move iterator before removal
             removeClient(socket_fd);
-        } else {
-            ++it;
         }
+        else
+            ++it;
     }
 }
 
