@@ -37,11 +37,17 @@ public:
     
     // Method to automatically set Content-Length based on body
     void updateContentLength();
-    private:
-        void createOkResponse(const HttpRequest &request);
-        std::string createErrorResponse(const HttpRequest &request, int errorCode) const;
-        const std::string createGetResponse(const HttpRequest &request, const ServerConfig& config);
-        const std::string createPostResponse(const HttpRequest &request,  const ServerConfig& config) const;
-        const std::string createDeleteResponse(const HttpRequest &request,  const ServerConfig& config) const;
-        const std::string createUnknowResponse(const HttpRequest &request,  const ServerConfig& config) const;
+    
+    // Optimization helpers to reduce code duplication
+private:
+    std::string normalizeUri(const std::string& uri) const;
+    std::string getContentType(const std::string& path) const;
+    std::string buildResponse(const HttpRequest &request, int statusCode, 
+            const std::string& contentType = "", const std::string& body = "") const;
+    void createOkResponse(const HttpRequest &request);
+    std::string createErrorResponse(const HttpRequest &request, int errorCode) const;
+    const std::string createGetResponse(const HttpRequest &request, const ServerConfig& config);
+    const std::string createPostResponse(const HttpRequest &request,  const ServerConfig& config) const;
+    const std::string createDeleteResponse(const HttpRequest &request,  const ServerConfig& config) const;
+    const std::string createUnknowResponse(const HttpRequest &request,  const ServerConfig& config) const;
 };
