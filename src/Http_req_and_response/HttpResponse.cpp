@@ -3,7 +3,7 @@
 #include "macros.hpp"
 
 // Common helper to normalize and sanitize URI paths
-std::string HttpResponse::normalizeUri(const std::string& uri)
+std::string HttpResponse::normalizeUri(const std::string& uri) const
 {
     std::string normalized;
     
@@ -26,7 +26,7 @@ std::string HttpResponse::normalizeUri(const std::string& uri)
 }
 
 // Common helper to determine content type from file extension
-std::string HttpResponse::getContentType(const std::string& path)
+std::string HttpResponse::getContentType(const std::string& path) const
 {
     std::string::size_type dot = path.rfind('.');
     if (dot == std::string::npos)
@@ -45,7 +45,7 @@ std::string HttpResponse::getContentType(const std::string& path)
 
 // Common helper to build HTTP response with headers
 std::string HttpResponse::buildResponse(const HttpRequest &request, int statusCode, 
-        const std::string& contentType, const std::string& body)
+        const std::string& contentType, const std::string& body) const
 {
     std::ostringstream resp;
     resp << request.getHttpVersion() << " " << statusCode << " " 
@@ -178,9 +178,7 @@ void HttpResponse::createOkResponse(const HttpRequest &request)
         fullResponse += "\r\n";
     }
     else if (request.getMethod() == "DELETE")
-    {
         fullResponse = request.getHttpVersion() + " 204 " + getReasonPhraseFromCode(204) + "\r\n";
-    }
     fullResponse += body;
 }
 
@@ -300,11 +298,11 @@ std::string HttpResponse::createResponse(const HttpRequest &request, const Serve
     const std::string& method = request.getMethod();
 
     if (method == "GET")
-        return response.createGetResponse(request, config);
+        return (response.createGetResponse(request, config));
     else if (method == "POST")
-        return response.createPostResponse(request, config);
+        return (response.createPostResponse(request, config));
     else if (method == "DELETE")
-        return response.createDeleteResponse(request, config);
+        return (response.createDeleteResponse(request, config));
     else
-        return response.createUnknowResponse(request, config);
+        return (response.createUnknowResponse(request, config));
 }
