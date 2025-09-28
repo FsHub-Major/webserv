@@ -140,17 +140,66 @@ std::string HttpResponse::createErrorResponse(const HttpRequest &request, int er
 
 const std::string HttpResponse::createPostResponse(const HttpRequest &request, const ServerConfig & config) const
 {
+    (void)config; // not used yet (could be used for upload_dir, limits, etc.)
 
-    (void) config;
-    // Minimal 501 (adjust later when implementing POST)
-    const std::string body = "<html><body><h1>501 Not Implemented</h1></body></html>";
+    // check for content-lenght / no chunk implementation 
+    const std::map<std::string, std::string> &hdrs = request.getHeaders();
+    std::map<std::string, std::string>::const_iterator it = hdrs.find("Content-Length");
+    if (it == hdrs.end()) {
+        it = hdrs.find("content-length");
+        if (it == hdrs.end()) {
+            std::ostringstream resp;
+            const std::string msg = "<html><body><h1>411 Length Required</h1></body></html>";
+            resp << request.getHttpVersion() << " 411 Length Required\r\n";
+            resp << "Content-Type: text/html; charset=UTF-8\r\n";
+            resp << "Content-Length: " << msg.size() << "\r\n";
+            resp << "Connection: close\r\n\r\n";
+            resp << msg;
+            return resp.str();
+        }
+    }
+
+    unsigned long content_length = 0;
+    {
+        std::istringstream iss(it->second);
+        iss >> content_length; // if fails, remains 0
+    }
+
+    const std::string &bodyRef = request.getBody();
+
+    // 3) Enforce client_max_body_size (if configured > 0)
+    // Note: config.client_max_body_size is size_t; treat 0 as "no limit".
+    if (config.client_max_body_size > 0 && bodyRef.size() > config.client_max_body_size) {
+        std::ostringstream resp;
+        const std::string msg = "<html><body><h1>413 Payload Too Large</h1></body></html>";
+        resp << request.getHttpVersion() << " 413 Payload Too Large\r\n";
+        resp << "Content-Type: text/html; charset=UTF-8\r\n";
+        resp << "Content-Length: " << msg.size() << "\r\n";
+        resp << "Connection: close\r\n\r\n";
+        resp << msg;
+        return resp.str();
+    }
+
+    // 4) If body contains more bytes (e.g., next pipelined request), keep only Content-Length bytes.
+    if (bodyRef.size() < content_length) {
+        std::ostringstream resp;
+        const std::string msg = "<html><body><h1>400 Bad Request</h1><p>Incomplete body</p></body></html>";
+        resp << request.getHttpVersion() << " 400 Bad Request\r\n";
+        resp << "Content-Type: text/html; charset=UTF-8\r\n";
+        resp << "Content-Length: " << msg.size() << "\r\n";
+        resp << "Connection: close\r\n\r\n";
+        resp << msg;
+        return resp.str();
+    }
+
+    // 5) Echo the first Content-Length bytes back with 200 OK as a simple POST handler
+    // You can customize to save to upload_dir from config later.
     std::ostringstream resp;
-    resp << request.getHttpVersion() << " 501 Not Implemented\r\n";
-    resp << "Content-Type: text/html; charset=UTF-8\r\n";
-    resp << "Content-Length: " << body.size() << "\r\n";
-    resp << "Connection: close\r\n";
-    resp << "\r\n";
-    resp << body;
+    resp << request.getHttpVersion() << " 200 OK\r\n";
+    resp << "Content-Type: text/plain; charset=UTF-8\r\n";
+    resp << "Content-Length: " << content_length << "\r\n";
+    resp << "Connection: close\r\n\r\n";
+    resp << bodyRef.substr(0, static_cast<std::string::size_type>(content_length));
     return resp.str();
 }
 

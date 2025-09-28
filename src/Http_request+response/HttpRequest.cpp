@@ -46,8 +46,12 @@ bool HttpRequest::parseRequest(const std::string &request, const std::string roo
         val = trim(line.substr(line.find_first_of(':') + 1), " \r");
         headers[key] = val;
     }
-    while (std::getline(req_stream, line))
-        body += line;
+    
+    std::string::size_type header_end = request.find("\r\n\r\n");
+    if (header_end != std::string::npos)
+        body = request.substr(header_end + 4);
+    else
+        body.clear();
     return (true);
 }
 
@@ -132,4 +136,9 @@ const std::string& HttpRequest::getHeader(const std::string& key) const
 const std::string &HttpRequest::getRoot() const
 {
     return (root);
+}
+
+const std::string &HttpRequest::getBody() const
+{
+    return body;
 }
