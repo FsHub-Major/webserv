@@ -37,6 +37,12 @@ public:
     
     // Method to automatically set Content-Length based on body
     void updateContentLength();
+    
+    // Optimization helpers to reduce code duplication
+    static std::string normalizeUri(const std::string& uri);
+    static std::string getContentType(const std::string& path);
+    static std::string buildResponse(const HttpRequest &request, int statusCode, 
+            const std::string& contentType = "", const std::string& body = "");
     private:
         void createOkResponse(const HttpRequest &request);
         std::string createErrorResponse(const HttpRequest &request, int errorCode) const;
