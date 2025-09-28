@@ -5,19 +5,19 @@ class HttpRequest
 {
 private:
     // Request line components
-   std::string                         method;          // GET, POST, DELETE. We only need 3
-   std::string                         uri;            // /path/to/resource
-   std::string                         httpVersion;    // HTTP/1.1
-   std::string                         root;           //path to root server
+   std::string                               method;          // GET, POST, DELETE. We only need 3
+   std::string                               uri;            // /path/to/resource
+   std::string                               httpVersion;    // HTTP/1.1
+   std::string                               root;           //path to root server
 
     // Headers
-   std::map<std::string, std::string>  headers;
+   std::map<std::string, std::string>        headers;
     
     // Body (for POST requests)
-   std::string                         body;
+   std::string                               body;
     
     // Query parameters (from URL)
-   std::map<std::string, std::string>  queryParams;
+   std::map<std::string, std::string>        queryParams;
   
     
     // Raw request data
@@ -42,5 +42,5 @@ private:
    const std::string                         &getHeader(const std::string& key) const;
    const std::string                         &getRoot() const;
  private:
-   void  parseQuery();
+   void                                       parseQuery();
 };
