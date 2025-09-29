@@ -7,6 +7,7 @@
 #include <map>
 
 struct LocationConfig {
+    std::string location;
     std::string path;
     std::vector<std::string> allowed_methods;
     bool autoindex;
