@@ -139,9 +139,7 @@ void Server::run() {
 }
 
 #ifdef __APPLE__
-/**
- * @brief Event loop implementation using poll() for macOS
- */
+
 void Server::runWithPoll()
 {
     const int TIMEOUT_MS = 5000; // 5 second timeout
@@ -174,7 +172,7 @@ void Server::runWithPoll()
 void Server::runWithEpoll()
 {
     const int MAX_EVENTS = 1024;
-    const int TIMEOUT_MS = 5000; // 5 second timeout
+    const int TIMEOUT_MS = 50000; // 50 second timeout
     struct epoll_event events[MAX_EVENTS];
     int n;
     
