@@ -90,6 +90,12 @@ void Server::run() {
     {
         buildPollFds();
 
+        // If no fds to poll, sleep briefly and continue
+        if (poll_fds.empty()) {
+            usleep(10000); // 10ms
+            continue;
+        }
+
         // poll timeout in milliseconds (5s)
         int ret = poll(&poll_fds[0], poll_fds.size(), 5000);
         if (ret < 0)
