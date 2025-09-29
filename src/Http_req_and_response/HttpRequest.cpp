@@ -141,3 +141,7 @@ const std::string& HttpRequest::getHeader(const std::string& key) const {
 const std::string &HttpRequest::getRoot() const {
     return root;
 }
+
+const std::string &HttpRequest::getBody() const {
+    return body;
+}
