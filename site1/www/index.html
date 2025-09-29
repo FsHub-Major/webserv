@@ -1,0 +1,120 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WebServ - HTTP Server</title>
+    <!-- External asset GETs (CSS/JS) to test static serving -->
+    <link rel="stylesheet" href="/assets/css/style.css">
+</head>
+<body>
+    <div class="container">
+        <header class="site-header">
+            <img class="logo" src="/assets/img/logo.svg" alt="Logo" />
+            <div class="title">WebServ HTTP Server</div>
+            <div class="spacer"></div>
+            <div class="pill">C++ • epoll • HTTP/1.0</div>
+        </header>
+
+        <section class="hero">
+            <h1>🚀 Ready to test your server</h1>
+            <p>Use the playground below to send GET and PUT requests. Static assets are served from <code>/assets</code>.</p>
+            <div class="status">✅ Server is running successfully!</div>
+        </section>
+
+        <section class="cards">
+            <article class="card">
+                <h3>🔄 I/O Multiplexing</h3>
+                <p>Efficiently handles multiple clients with <code>select()</code> without threads.</p>
+            </article>
+            <article class="card">
+                <h3>⚡ Non-blocking I/O</h3>
+                <p>Single-threaded, event-driven, low resource usage.</p>
+            </article>
+            <article class="card">
+                <h3>🔧 Configuration</h3>
+                <p>Port and root via config; per-location options coming next.</p>
+            </article>
+            <article class="card">
+                <h3>⏰ Timeouts</h3>
+                <p>Inactivity cleanup after 30 seconds.</p>
+            </article>
+        </section>
+
+        <section class="panel">
+            <h2>📊 Server Info</h2>
+            <div class="code">
+                Max Clients: 20<br>
+                Timeout: 30 seconds<br>
+                Protocol: HTTP/1.1<br>
+                Architecture: Event-driven
+            </div>
+        </section>
+
+        <section class="panel">
+            <h2>🧪 Test Commands</h2>
+            <div class="code">
+                # Test with curl:<br>
+                curl http://localhost:8080<br><br>
+                
+                # Test with telnet:<br>
+                telnet localhost 8080<br><br>
+                
+                # Multiple connections:<br>
+                ./spawnTest
+            </div>
+        </section>
+
+        <section class="panel">
+            <h2>🧰 HTTP Request Playground</h2>
+            <h3>⬆️ POST File Upload</h3>
+            <p>Choose a file and POST it to a destination URL path (e.g., <code>/upload/my.bin</code>). Ensure your server allows POST on that path.</p>
+            <div class="control-row">
+                <input type="text" id="put-file-path" placeholder="/upload/my.bin" value="/upload/my.bin">
+                <input type="file" id="put-file-input">
+                <button class="btn" onclick="putFile()">POST file</button>
+            </div>
+            <pre id="put-file-result" class="code result" style="white-space:pre-wrap;"></pre>
+        </section>
+
+        <section class="panel">
+            <h3>📝 POST Text</h3>
+            <p>Send plain text via POST to a destination path (e.g., <code>/upload/note.txt</code>).</p>
+            <label for="put-text-path">Destination path</label>
+            <input type="text" id="put-text-path" placeholder="/upload/note.txt" value="/upload/note.txt">
+            <label for="put-text-body">Body</label>
+            <textarea id="put-text-body" rows="6" placeholder="Type your text here..."></textarea>
+            <div style="margin-top:8px;">
+                <button class="btn" onclick="putText()">POST text</button>
+                <button class="btn secondary" onclick="document.getElementById('put-text-body').value='';">Clear</button>
+            </div>
+            <pre id="put-text-result" class="code result" style="white-space:pre-wrap;"></pre>
+        </section>
+
+        <section class="panel">
+            <h3>🔎 GET Any Path</h3>
+            <p>Quickly test a GET request to any path (e.g., <code>/assets/js/app.js</code> or <code>/</code>).</p>
+            <div class="control-row">
+                <input type="text" id="get-path" placeholder="/assets/js/app.js" value="/assets/js/app.js">
+                <button class="btn" onclick="getUrl()">GET</button>
+            </div>
+            <pre id="get-result" class="code result" style="white-space:pre-wrap;"></pre>
+        </section>
+
+        <h2>🎯 Implementation Highlights</h2>
+        <ul>
+            <li><strong>select() multiplexing</strong> - handles multiple clients efficiently</li>
+            <li><strong>No thread context switching</strong> - CPU efficient</li>
+            <li><strong>Kernel-based event notification</strong> - relies on OS efficiency</li>
+            <li><strong>Process sleeps until activity</strong> - power efficient</li>
+        </ul>
+
+        <footer class="site-footer">
+            <p>Built from scratch in C++ • 2025</p>
+        </footer>
+    </div>
+    <!-- External JS to exercise GET and drive PUT via fetch() -->
+    <script src="/assets/js/app.js"></script>
+</body>
+</html>
