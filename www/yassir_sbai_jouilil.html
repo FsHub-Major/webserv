@@ -1,0 +1,284 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Yassir Sbai Jouilil — DevOps Engineer</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700;800&display=swap" rel="stylesheet">
+  <meta name="description" content="Portfolio of Yassir Sbai Jouilil — DevOps Engineer. CI/CD, Kubernetes, Terraform, Cloud automation and observability." />
+  <style>
+    :root{
+      --bg:#08102a;
+      --card: rgba(255,255,255,0.04);
+      --glass: rgba(255,255,255,0.03);
+      --accent1: #6ee7b7;
+      --accent2: #60a5fa;
+      --muted: rgba(255,255,255,0.65);
+      --glass-border: rgba(255,255,255,0.06);
+      font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial;
+      color-scheme: dark;
+    }
+    *{box-sizing:border-box}
+    html,body{height:100%}
+    body{
+      margin:0;
+      background: radial-gradient(800px 600px at 10% 10%, rgba(96,165,250,0.06), transparent),
+                  radial-gradient(700px 500px at 90% 90%, rgba(110,231,183,0.03), transparent),
+                  var(--bg);
+      color:#e6eef8;
+      -webkit-font-smoothing:antialiased;
+      -moz-osx-font-smoothing:grayscale;
+      padding:40px;
+      display:flex;
+      justify-content:center;
+      font-size:16px;
+      line-height:1.45;
+    }
+    .container{max-width:1100px;width:100%}
+
+    header{
+      display:flex;align-items:center;justify-content:space-between;margin-bottom:28px
+    }
+    .brand{display:flex;gap:14px;align-items:center}
+    .logo{width:56px;height:56px;border-radius:12px;display:grid;place-items:center;background:linear-gradient(135deg,var(--accent2),var(--accent1));box-shadow:0 6px 20px rgba(16,24,40,0.6);font-weight:800}
+    .brand h1{font-size:18px;margin:0}
+    .brand p{margin:0;color:var(--muted);font-size:13px}
+
+    .controls{display:flex;gap:10px;align-items:center}
+    .btn{background:var(--glass);border:1px solid var(--glass-border);padding:8px 12px;border-radius:10px;color:inherit;font-weight:600;cursor:pointer}
+
+    main{display:grid;grid-template-columns:1fr 360px;gap:26px}
+
+    /* left */
+    .card{background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));padding:22px;border-radius:16px;border:1px solid var(--glass-border)}
+    .intro{display:flex;gap:18px;align-items:center}
+    .avatar{width:96px;height:96px;border-radius:14px;overflow:hidden;flex-shrink:0;background:linear-gradient(135deg,#0ea5e9,#7c3aed);display:grid;place-items:center;font-weight:800;font-size:28px}
+    .meta h2{margin:0 0 6px 0}
+    .meta p{margin:0;color:var(--muted)}
+
+    .tags{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
+    .tag{background:transparent;padding:6px 10px;border-radius:999px;border:1px solid var(--glass-border);font-weight:600;font-size:13px}
+
+    .section{margin-top:18px}
+    .section h3{margin:0 0 12px 0;font-size:15px}
+
+    .skills{display:grid;grid-template-columns:repeat(2,1fr);gap:12px}
+    .skill{background:var(--card);padding:10px;border-radius:10px}
+    .skill .label{display:flex;justify-content:space-between;margin-bottom:8px;font-size:13px}
+    .bar{height:8px;background:rgba(255,255,255,0.06);border-radius:8px;overflow:hidden}
+    .bar > i{display:block;height:100%;background:linear-gradient(90deg,var(--accent2),var(--accent1));border-radius:8px}
+
+    .projects{display:grid;gap:12px}
+    .proj{display:flex;justify-content:space-between;align-items:center;padding:12px;border-radius:10px;background:linear-gradient(90deg, rgba(255,255,255,0.02), transparent)}
+    .proj .left{max-width:78%}
+    .proj h4{margin:0 0 6px 0}
+    .proj p{margin:0;color:var(--muted);font-size:13px}
+    .links a{margin-left:8px;text-decoration:none;color:var(--muted);font-weight:700}
+
+    /* right column */
+    aside{position:relative}
+    .contact-card{position:sticky;top:40px}
+    .contact-card .line{display:flex;align-items:center;gap:10px;margin-bottom:10px}
+    .chip{padding:8px 10px;border-radius:10px;border:1px solid var(--glass-border);background:var(--glass)}
+
+    footer{margin-top:18px;color:var(--muted);font-size:13px;text-align:center}
+
+    /* small screens */
+    @media (max-width:980px){
+      main{grid-template-columns:1fr;}
+      aside .contact-card{position:static}
+    }
+
+    /* subtle animations */
+    .logo, .avatar{transform:translateY(0);transition:transform .4s cubic-bezier(.2,.9,.3,1)}
+    .logo:hover,.avatar:hover{transform:translateY(-6px)}
+
+    /* fancy terminal */
+    .term{background:#051428;padding:14px;border-radius:12px;font-family:ui-monospace, SFMono-Regular, Menlo, Monaco, 'Roboto Mono',monospace;font-size:13px;color:#9bd9ff}
+    .term .cmd{display:block}
+
+    /* theme toggle */
+    .theme-toggle{display:inline-flex;align-items:center;gap:8px;padding:6px;border-radius:999px}
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <div class="brand">
+        <div class="logo">YS</div>
+        <div>
+          <h1>Yassir Sbai Jouilil</h1>
+          <p>DevOps Engineer — Cloud Automation · CI/CD · Kubernetes</p>
+        </div>
+      </div>
+
+      <div class="controls">
+        <button class="btn" onclick="location.href='#projects'">See projects</button>
+        <button class="btn" id="downloadBtn">Download Resume</button>
+        <div class="theme-toggle btn" onclick="toggleTheme()" title="Toggle theme">🌙</div>
+      </div>
+    </header>
+
+    <main>
+      <section>
+        <div class="card intro">
+          <div class="avatar">YS</div>
+          <div class="meta">
+            <h2>Hi, I'm Yassir — I build reliable platforms and automate boring stuff.</h2>
+            <p>DevOps engineer with 6+ years experience designing infrastructure as code, building GitOps pipelines, and running production Kubernetes at scale.</p>
+            <div class="tags">
+              <div class="tag">Terraform</div>
+              <div class="tag">Kubernetes</div>
+              <div class="tag">Docker</div>
+              <div class="tag">AWS</div>
+              <div class="tag">CI/CD</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="card section">
+          <h3>Core Skills</h3>
+          <div class="skills">
+            <div class="skill">
+              <div class="label"><span>Infrastructure as Code</span><strong>90%</strong></div>
+              <div class="bar" aria-hidden><i style="width:90%"></i></div>
+            </div>
+            <div class="skill">
+              <div class="label"><span>Kubernetes & Containers</span><strong>88%</strong></div>
+              <div class="bar"><i style="width:88%"></i></div>
+            </div>
+            <div class="skill">
+              <div class="label"><span>CI/CD & GitOps</span><strong>92%</strong></div>
+              <div class="bar"><i style="width:92%"></i></div>
+            </div>
+            <div class="skill">
+              <div class="label"><span>Monitoring & Observability</span><strong>85%</strong></div>
+              <div class="bar"><i style="width:85%"></i></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="card section" id="projects">
+          <h3>Highlighted Projects</h3>
+          <div class="projects">
+            <div class="proj">
+              <div class="left">
+                <h4>GitOps Platform · multi-cluster</h4>
+                <p>Built a GitOps pipeline using ArgoCD, Terraform, and crossplane to deploy microservices across 5 clusters with canary rollouts.</p>
+              </div>
+              <div class="links">
+                <a href="#">Live</a>
+                <a href="#">Code</a>
+              </div>
+            </div>
+
+            <div class="proj">
+              <div class="left">
+                <h4>Cost-optimized infra on AWS</h4>
+                <p>Automated infra provisioning with Terraform + Terragrunt, implemented autoscaling and spot fleets saving 40% monthly costs.</p>
+              </div>
+              <div class="links"><a href="#">Case study</a></div>
+            </div>
+
+            <div class="proj">
+              <div class="left">
+                <h4>Observability Stack</h4>
+                <p>Deployed Prometheus, Loki and Grafana with alerting playbooks and runbooks — reduced MTTD by 60%.</p>
+              </div>
+              <div class="links"><a href="#">Docs</a></div>
+            </div>
+
+          </div>
+        </div>
+
+        <div class="card section">
+          <h3>Experience</h3>
+          <div style="display:grid;gap:10px">
+            <div>
+              <strong>Senior DevOps Engineer — Acme Cloud</strong>
+              <div style="color:var(--muted);font-size:13px">2021 — Present</div>
+              <p style="margin-top:8px;color:var(--muted)">Led platform team owning CI/CD, infra-as-code and platform reliability for customer-facing services.</p>
+            </div>
+            <div>
+              <strong>DevOps Engineer — TechStartup</strong>
+              <div style="color:var(--muted);font-size:13px">2019 — 2021</div>
+              <p style="margin-top:8px;color:var(--muted)">Built microservice deployments, automated test pipelines and implemented centralized logging.</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="card section">
+          <h3>Quick Demo</h3>
+          <div class="term" role="region" aria-label="demo terminal">
+            <span class="cmd">$ git clone https://github.com/yassir/infra && cd infra</span>
+            <span class="cmd">$ terraform plan -var='env=prod' -out=tfplan</span>
+            <span class="cmd">$ argocd app sync myapp</span>
+          </div>
+        </div>
+
+      </section>
+
+      <aside>
+        <div class="contact-card card">
+          <h3>Contact</h3>
+          <div class="line"><div class="chip">📍 Morocco</div><div class="chip">💼 Open to opportunities</div></div>
+          <div style="margin-top:10px">
+            <div style="display:flex;gap:8px;align-items:center"><strong>Email</strong><span style="color:var(--muted);margin-left:auto">yassir.sbai@example.com</span></div>
+            <div style="display:flex;gap:8px;align-items:center;margin-top:8px"><strong>LinkedIn</strong><a href="https://www.linkedin.com/in/yassir-sbai-jouilil-34bb35278/" style="margin-left:auto;color:var(--muted)">View profile</a></div>
+            <div style="display:flex;gap:8px;align-items:center;margin-top:8px"><strong>Github</strong><a href="#" style="margin-left:auto;color:var(--muted)">github.com/yassir</a></div>
+          </div>
+
+          <hr style="margin:14px 0;border:none;border-top:1px solid rgba(255,255,255,0.03)">
+
+          <h3>Availability</h3>
+          <p style="color:var(--muted);font-size:13px;margin-top:6px">Freelance / Full-time — available for remote work and relocation.</p>
+
+          <div style="display:flex;gap:8px;margin-top:12px">
+            <button class="btn" onclick="location.href='mailto:yassir.sbai@example.com?subject=Opportunity'">Email</button>
+            <button class="btn" id="cvBtn" onclick="downloadResume()">Resume</button>
+          </div>
+
+        </div>
+
+        <div class="card section" style="margin-top:14px">
+          <h3>Certifications</h3>
+          <ul style="margin:0;padding-left:18px;color:var(--muted)">
+            <li>AWS Certified Solutions Architect</li>
+            <li>CKA (Certified Kubernetes Administrator)</li>
+            <li>HashiCorp Certified: Terraform Associate</li>
+          </ul>
+        </div>
+
+      </aside>
+    </main>
+
+    <footer>
+      Built with ❤️ by Yassir · <span id="year"></span>
+    </footer>
+  </div>
+
+  <script>
+    document.getElementById('year').textContent = new Date().getFullYear();
+
+    function toggleTheme(){
+      if(document.documentElement.style.getPropertyValue('--bg') === ''){
+        document.documentElement.style.setProperty('--bg','#f7fafc');
+        document.documentElement.style.colorScheme='light';
+        document.body.style.color='#0b1220';
+      } else {
+        document.documentElement.style.setProperty('--bg','#08102a');
+        document.documentElement.style.colorScheme='dark';
+        document.body.style.color='#e6eef8';
+      }
+    }
+
+    function downloadResume(){
+      // Placeholder: replace with real resume file URL
+      const url = 'https://example.com/Yassir-Sbai-Jouilil-Resume.pdf';
+      window.open(url,'_blank');
+    }
+
+    document.getElementById('downloadBtn').addEventListener('click', downloadResume);
+  </script>
+</body>
+</html>

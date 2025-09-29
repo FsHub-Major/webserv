@@ -1,0 +1,510 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WebServ File Manager</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            text-align: center;
+        }
+
+        .header h1 {
+            margin-bottom: 10px;
+        }
+
+        .main-content {
+            display: flex;
+            min-height: 600px;
+        }
+
+        .sidebar {
+            width: 300px;
+            background: #f8f9fa;
+            border-right: 1px solid #dee2e6;
+            padding: 20px;
+        }
+
+        .file-content {
+            flex: 1;
+            padding: 20px;
+        }
+
+        .upload-area {
+            border: 2px dashed #667eea;
+            border-radius: 10px;
+            padding: 40px;
+            text-align: center;
+            margin-bottom: 30px;
+            background: #f8f9ff;
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+
+        .upload-area:hover {
+            border-color: #764ba2;
+            background: #f0f4ff;
+        }
+
+        .upload-area.dragover {
+            border-color: #28a745;
+            background: #f0fff4;
+        }
+
+        .upload-icon {
+            font-size: 3rem;
+            margin-bottom: 15px;
+            color: #667eea;
+        }
+
+        .file-input {
+            display: none;
+        }
+
+        .upload-btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 12px 30px;
+            border: none;
+            border-radius: 25px;
+            font-size: 16px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin-top: 15px;
+        }
+
+        .upload-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        .file-tree {
+            background: white;
+            border-radius: 10px;
+            padding: 15px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+
+        .file-tree h3 {
+            margin-bottom: 15px;
+            color: #333;
+            border-bottom: 2px solid #667eea;
+            padding-bottom: 10px;
+        }
+
+        .file-item {
+            display: flex;
+            align-items: center;
+            padding: 10px;
+            border-radius: 8px;
+            margin-bottom: 5px;
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+
+        .file-item:hover {
+            background: #f8f9ff;
+        }
+
+        .file-icon {
+            width: 20px;
+            height: 20px;
+            margin-right: 10px;
+            font-size: 16px;
+        }
+
+        .file-name {
+            flex: 1;
+            font-size: 14px;
+        }
+
+        .file-actions {
+            display: flex;
+            gap: 5px;
+        }
+
+        .action-btn {
+            padding: 5px 10px;
+            border: none;
+            border-radius: 15px;
+            font-size: 12px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .download-btn {
+            background: #28a745;
+            color: white;
+        }
+
+        .download-btn:hover {
+            background: #218838;
+        }
+
+        .delete-btn {
+            background: #dc3545;
+            color: white;
+        }
+
+        .delete-btn:hover {
+            background: #c82333;
+        }
+
+        .folder {
+            background: #fff3cd;
+        }
+
+        .folder .file-icon {
+            color: #856404;
+        }
+
+        .breadcrumb {
+            background: #e9ecef;
+            padding: 10px 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            font-size: 14px;
+            color: #495057;
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 20px;
+            background: #e9ecef;
+            border-radius: 10px;
+            overflow: hidden;
+            margin-top: 15px;
+            display: none;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            width: 0%;
+            transition: width 0.3s ease;
+        }
+
+        .status-message {
+            margin-top: 15px;
+            padding: 10px;
+            border-radius: 8px;
+            display: none;
+        }
+
+        .status-success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+
+        .status-error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+
+        @media (max-width: 768px) {
+            .main-content {
+                flex-direction: column;
+            }
+
+            .sidebar {
+                width: 100%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🗂️ WebServ File Manager</h1>
+            <p>Upload, download, and manage your files</p>
+        </div>
+
+        <div class="main-content">
+            <div class="sidebar">
+                <div class="file-tree">
+                    <h3>📁 File Tree</h3>
+                    <div class="breadcrumb" id="breadcrumb">
+                        📍 / (root)
+                    </div>
+                    <div id="file-list">
+                        <!-- Files will be populated here -->
+                    </div>
+                </div>
+            </div>
+
+            <div class="file-content">
+                <div class="upload-area" id="upload-area">
+                    <div class="upload-icon">📤</div>
+                    <h3>Drop files here or click to upload</h3>
+                    <p>Drag and drop files or click to select</p>
+                    <input type="file" id="file-input" class="file-input" multiple>
+                    <button class="upload-btn" onclick="document.getElementById('file-input').click()">
+                        Choose Files
+                    </button>
+                    <div class="progress-bar" id="progress-bar">
+                        <div class="progress-fill" id="progress-fill"></div>
+                    </div>
+                    <div class="status-message" id="status-message"></div>
+                </div>
+
+                <div class="file-actions-panel">
+                    <h3>📋 Quick Actions</h3>
+                    <p>Select files from the tree to download or delete them.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Sample file data (in a real implementation, this would come from the server)
+        let currentPath = '';
+        let fileData = [
+            { name: 'index.html', type: 'file', size: '2.1 KB', icon: '📄' },
+            { name: 'login.html', type: 'file', size: '1.8 KB', icon: '📄' },
+            { name: '404error.html', type: 'file', size: '3.2 KB', icon: '📄' },
+            { name: 'upload_page.html', type: 'file', size: '2.5 KB', icon: '📄' },
+            { name: 'uploads', type: 'folder', size: '---', icon: '📁' },
+            { name: 'images', type: 'folder', size: '---', icon: '📁' },
+            { name: 'documents', type: 'folder', size: '---', icon: '📁' }
+        ];
+
+        // Initialize page
+        document.addEventListener('DOMContentLoaded', function() {
+            renderFileTree();
+            setupUploadHandlers();
+        });
+
+        function renderFileTree() {
+            const fileList = document.getElementById('file-list');
+            fileList.innerHTML = '';
+
+            fileData.forEach(file => {
+                const fileItem = document.createElement('div');
+                fileItem.className = 'file-item' + (file.type === 'folder' ? ' folder' : '');
+                
+                fileItem.innerHTML = `
+                    <span class="file-icon">${file.icon}</span>
+                    <span class="file-name">${file.name}</span>
+                    <div class="file-actions">
+                        ${file.type === 'file' ? `
+                            <button class="action-btn download-btn" onclick="downloadFile('${file.name}')">⬇️</button>
+                            <button class="action-btn delete-btn" onclick="deleteFile('${file.name}')">🗑️</button>
+                        ` : ''}
+                    </div>
+                `;
+
+                if (file.type === 'folder') {
+                    fileItem.onclick = () => openFolder(file.name);
+                }
+
+                fileList.appendChild(fileItem);
+            });
+        }
+
+        function setupUploadHandlers() {
+            const uploadArea = document.getElementById('upload-area');
+            const fileInput = document.getElementById('file-input');
+
+            // Click to upload
+            uploadArea.addEventListener('click', function(e) {
+                if (e.target !== fileInput) {
+                    fileInput.click();
+                }
+            });
+
+            // Drag and drop
+            uploadArea.addEventListener('dragover', function(e) {
+                e.preventDefault();
+                uploadArea.classList.add('dragover');
+            });
+
+            uploadArea.addEventListener('dragleave', function(e) {
+                e.preventDefault();
+                uploadArea.classList.remove('dragover');
+            });
+
+            uploadArea.addEventListener('drop', function(e) {
+                e.preventDefault();
+                uploadArea.classList.remove('dragover');
+                const files = e.dataTransfer.files;
+                handleFileUpload(files);
+            });
+
+            // File input change
+            fileInput.addEventListener('change', function(e) {
+                handleFileUpload(e.target.files);
+            });
+        }
+
+        function handleFileUpload(files) {
+            if (files.length === 0) return;
+
+            const progressBar = document.getElementById('progress-bar');
+            const progressFill = document.getElementById('progress-fill');
+            const statusMessage = document.getElementById('status-message');
+            
+            progressBar.style.display = 'block';
+            statusMessage.style.display = 'none';
+
+            // Simulate upload progress
+            let progress = 0;
+            const interval = setInterval(() => {
+                progress += Math.random() * 15;
+                if (progress >= 100) {
+                    progress = 100;
+                    clearInterval(interval);
+                    
+                    // Show success message
+                    setTimeout(() => {
+                        progressBar.style.display = 'none';
+                        statusMessage.className = 'status-message status-success';
+                        statusMessage.textContent = `✅ Successfully uploaded ${files.length} file(s)`;
+                        statusMessage.style.display = 'block';
+                        
+                        // Add uploaded files to the list
+                        for (let file of files) {
+                            fileData.push({
+                                name: file.name,
+                                type: 'file',
+                                size: formatFileSize(file.size),
+                                icon: getFileIcon(file.name)
+                            });
+                        }
+                        renderFileTree();
+                        
+                        // In a real implementation, you would make an actual POST request:
+                        // uploadToServer(files);
+                    }, 500);
+                }
+                progressFill.style.width = progress + '%';
+            }, 100);
+        }
+
+        function downloadFile(filename) {
+            // In a real implementation, this would make a GET request to download the file
+            showStatus(`📥 Downloading ${filename}...`, 'success');
+            
+            // Simulate download
+            setTimeout(() => {
+                const link = document.createElement('a');
+                link.href = '/' + filename; // This would be the actual file URL
+                link.download = filename;
+                link.click();
+            }, 1000);
+        }
+
+        function deleteFile(filename) {
+            if (confirm(`Are you sure you want to delete ${filename}?`)) {
+                // In a real implementation, this would make a DELETE request
+                showStatus(`🗑️ Deleting ${filename}...`, 'success');
+                
+                // Remove from local data and re-render
+                fileData = fileData.filter(file => file.name !== filename);
+                renderFileTree();
+                
+                // Simulate server request:
+                // fetch('/' + filename, { method: 'DELETE' })
+            }
+        }
+
+        function openFolder(folderName) {
+            showStatus(`📁 Opening ${folderName}...`, 'success');
+            // In a real implementation, this would load folder contents from server
+        }
+
+        function showStatus(message, type) {
+            const statusMessage = document.getElementById('status-message');
+            statusMessage.className = `status-message status-${type}`;
+            statusMessage.textContent = message;
+            statusMessage.style.display = 'block';
+            
+            setTimeout(() => {
+                statusMessage.style.display = 'none';
+            }, 3000);
+        }
+
+        function formatFileSize(bytes) {
+            if (bytes === 0) return '0 B';
+            const k = 1024;
+            const sizes = ['B', 'KB', 'MB', 'GB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
+        }
+
+        function getFileIcon(filename) {
+            const ext = filename.split('.').pop().toLowerCase();
+            const icons = {
+                'html': '📄', 'htm': '📄',
+                'js': '📜', 'css': '🎨',
+                'json': '📋', 'xml': '📋',
+                'txt': '📝', 'md': '📝',
+                'jpg': '🖼️', 'jpeg': '🖼️', 'png': '🖼️', 'gif': '🖼️',
+                'pdf': '📕', 'doc': '📘', 'docx': '📘',
+                'zip': '📦', 'rar': '📦',
+                'mp3': '🎵', 'wav': '🎵',
+                'mp4': '🎬', 'avi': '🎬'
+            };
+            return icons[ext] || '📄';
+        }
+
+        // Real server integration functions (commented out for demo)
+        /*
+        function uploadToServer(files) {
+            const formData = new FormData();
+            for (let file of files) {
+                formData.append('files', file);
+            }
+            
+            fetch('/uploads/', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.text())
+            .then(data => {
+                showStatus('✅ Upload successful!', 'success');
+                refreshFileList();
+            })
+            .catch(error => {
+                showStatus('❌ Upload failed: ' + error, 'error');
+            });
+        }
+
+        function refreshFileList() {
+            fetch('/api/files')
+            .then(response => response.json())
+            .then(files => {
+                fileData = files;
+                renderFileTree();
+            });
+        }
+        */
+    </script>
+</body>
+</html>
