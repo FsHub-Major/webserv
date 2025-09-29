@@ -119,6 +119,9 @@ void ClientManager::processClientRequestPoll(const std::vector<int>& readable_fd
 
         std::cout << "RAW REQUEST" << std::endl;
         std::cout << raw_request << std::endl;
+        std::cout << "=====================" << std::endl;
+        HttpRequest request;
+        std::string response;
         if (request.parseRequest(raw_request, this->config.root))
             response = HttpResponse::createResponse(request, this->config);
         else
