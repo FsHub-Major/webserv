@@ -62,12 +62,31 @@ int main(int ac, char *av[]) {
     // std::cout << "Using port " << port << " from config: " << config_path << "\n";
 
     ServerConfig server_config;
-    server_config.port = 8080;   
+    server_config.port = 8080;
+    server_config.locations.push_back(LocationConfig());
+    server_config.locations.push_back(LocationConfig());
+    server_config.locations.push_back(LocationConfig());
+    // server_config.locations.push_back(LocationConfig());
     server_config.server_name = "localhost";
-    server_config.root = "./www";
+    server_config.root = "./site1/www";
     server_config.index_files.push_back("index.html");
     server_config.client_timeout = CLIENT_TIMEOUT;
-    server_config.client_max_body_size = 1024 * 1024;  // 1MB
+    server_config.error_pages[404] = "./site1/www/errors/404.html";
+    server_config.error_pages[500] = "./site1/www/errors/500.html";
+
+    server_config.locations[0].location = "/";
+    server_config.locations[0].path = "./site1/www";
+    server_config.locations[0].allowed_methods.push_back("GET");
+
+    server_config.locations[1].location = "/images";
+    server_config.locations[1].path = "./site1/images";
+    server_config.locations[1].allowed_methods.push_back("GET");
+
+    server_config.locations[2].location = "/upload";
+    server_config.locations[2].path = "./site1/upload";
+    server_config.locations[2].allowed_methods.push_back("POST");
+    
+
 
 
     Server server(server_config);
@@ -80,6 +99,10 @@ int main(int ac, char *av[]) {
     }
 
     std::cout << "Server init sucessfully" << std::endl;
+    std::cout << "Open in your browser:" << std::endl;
+    std::cout << "  -> http://127.0.0.1:" << server_config.port << "/" << std::endl;
+    std::cout << "  -> http://localhost:" << server_config.port << "/" << std::endl;
+    std::cout << "Serving root: " << server_config.root << std::endl;
 
     server.run();
 
