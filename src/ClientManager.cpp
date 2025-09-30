@@ -101,7 +101,7 @@ std::string ClientManager::readFullRequest(int socket_fd) {
                     std::istringstream iss(cl_str);
                     // On failure, content_length remains 0 (mirrors atoi behavior)
                     iss >> content_length;
-                    if (content_length < 0) content_length = 0;
+                    // if (content_length < 0) content_length = 0;
                 }
 
                 // Calculate body size

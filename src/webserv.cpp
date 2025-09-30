@@ -66,6 +66,7 @@ int main(int ac, char *av[]) {
     server_config.locations.push_back(LocationConfig());
     server_config.locations.push_back(LocationConfig());
     server_config.locations.push_back(LocationConfig());
+    server_config.client_max_body_size = 1024 * 1024; // 1MB
     // server_config.locations.push_back(LocationConfig());
     server_config.server_name = "localhost";
     server_config.root = "./site1/www";
@@ -79,11 +80,11 @@ int main(int ac, char *av[]) {
     server_config.locations[0].allowed_methods.push_back("GET");
 
     server_config.locations[1].location = "/images";
-    server_config.locations[1].path = "./site1/images";
+    server_config.locations[1].path = "./site1/www/images";
     server_config.locations[1].allowed_methods.push_back("GET");
 
     server_config.locations[2].location = "/upload";
-    server_config.locations[2].path = "./site1/upload";
+    server_config.locations[2].path = "./site1/www/uploads";
     server_config.locations[2].allowed_methods.push_back("POST");
     
 
