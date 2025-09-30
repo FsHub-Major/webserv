@@ -73,9 +73,35 @@ bool ClientManager::isFull() const {
 std::string ClientManager::readFullRequest(int socket_fd) {
     std::string request;
     char buffer[BUFF_SIZE];
-    for (;;) {
-        int n = read(socket_fd, buffer, sizeof(buffer));
-        if (n <= 0) return ""; // connection closed or error
+    
+    while (true) {
+        int valread = read(socket_fd, buffer, sizeof(buffer));
+        if (valread <= 0) {
+            return "";  // Connection closed or error
+        }
+        
+        request.append(buffer, valread);
+        
+        // Check if headers are complete (double CRLF)
+        if (request.find("\r\n\r\n") != std::string::npos) {
+            // Check if body is complete (if Content-Length present)
+            size_t header_end = request.find("\r\n\r\n");
+            std::string headers = request.substr(0, header_end);
+            
+            // Extract Content-Length (use stringstream instead of atoi)
+            size_t cl_pos = headers.find("Content-Length: ");
+            if (cl_pos != std::string::npos) {
+                size_t cl_end = headers.find("\r\n", cl_pos);
+                std::string cl_str = (cl_end == std::string::npos)
+                    ? headers.substr(cl_pos + 16)
+                    : headers.substr(cl_pos + 16, cl_end - cl_pos - 16);
+                size_t content_length = 0;
+                {
+                    std::istringstream iss(cl_str);
+                    // On failure, content_length remains 0 (mirrors atoi behavior)
+                    iss >> content_length;
+                    // if (content_length < 0) content_length = 0;
+                }
 
         request.append(buffer, n);
 
