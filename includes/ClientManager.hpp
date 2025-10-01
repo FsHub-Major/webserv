@@ -13,6 +13,8 @@ struct Client {
     time_t last_activity;
     struct sockaddr_in address;
     bool is_active;
+    // Incremental request buffer for this client
+    std::string recv_buffer;
     
     Client() : socket_fd(0), last_activity(0), is_active(false) {}
 };
@@ -48,5 +50,13 @@ private:
     void handleClientData(int index);
     void sendHttpResponse(int socket_fd);
     std::string readFullRequest(int socket_fd);
+
+    // Incremental reading helpers
+    bool readPartial(int socket_fd, std::string &buffer, size_t max_bytes);
+    bool requestComplete(const std::string &buffer);
+    // Contract: requestComplete returns true when headers found and either
+    //  - no Content-Length in headers, or
+    //  - body bytes >= parsed Content-Length
+    // chunked transfer-encoding is not handled here.
 
 };
