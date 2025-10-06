@@ -2,7 +2,7 @@
 #include "Config.hpp"
 #include "macros.hpp"
 
-// Helper method to get reason phrase from status code
+// Helper: map status code to reason phrase
 std::string HttpResponse::getReasonPhraseFromCode(int statusCode)
 {
     switch (statusCode) {
@@ -65,18 +65,9 @@ void HttpResponse::setContentLength(size_t length)
 }
 
 // Getters
-int HttpResponse::getStatusCode() const
-{
-    return statusCode;
-}
-
-const std::string& HttpResponse::getReasonPhrase() const
-{
-    return reasonPhrase;
-}
-
-const std::string& HttpResponse::getHeader(const std::string& key) const
-{
+int HttpResponse::getStatusCode() const { return statusCode; }
+const std::string& HttpResponse::getReasonPhrase() const { return reasonPhrase; }
+const std::string& HttpResponse::getHeader(const std::string& key) const {
     std::map<std::string, std::string>::const_iterator it = headers.find(key);
     if (it != headers.end()) {
         return it->second;
@@ -84,16 +75,8 @@ const std::string& HttpResponse::getHeader(const std::string& key) const
     static const std::string empty = "";
     return empty;
 }
-
-const std::string& HttpResponse::getBody() const
-{
-    return body;
-}
-
-const std::map<std::string, std::string>& HttpResponse::getHeaders() const
-{
-    return headers;
-}
+const std::string& HttpResponse::getBody() const { return body; }
+const std::map<std::string, std::string>& HttpResponse::getHeaders() const { return headers; }
 
 void HttpResponse::updateContentLength()
 {
@@ -105,16 +88,15 @@ void HttpResponse::updateContentLength()
 void HttpResponse::createOkResponse(const HttpRequest &request)
 {
     updateContentLength();
-    // Proper HTTP/1.1 formatting using CRLF
     fullResponse.clear();
-    fullResponse = request.getHttpVersion() + " 200 " + getReasonPhraseFromCode(200) + "\r\n";
+    fullResponse = request.getHttpVersion() + " 200 "
+                + getReasonPhraseFromCode(200) + "\r\n";
     fullResponse += "Content-Length: " + headers["Content-Length"] + "\r\n";
     if (headers.find("Content-Type") != headers.end())
         fullResponse += "Content-Type: " + headers["Content-Type"] + "\r\n";
     else
         fullResponse += "Content-Type: text/html; charset=UTF-8\r\n";
-    fullResponse += "Connection: close\r\n";
-    fullResponse += "\r\n";
+    fullResponse += "Connection: close\r\n\r\n";
     fullResponse += body;
 }
 
@@ -132,224 +114,173 @@ std::string HttpResponse::createErrorResponse(const HttpRequest &request, int er
     resp << request.getHttpVersion() << " " << errorCode << " " << reason << "\r\n";
     resp << "Content-Type: text/html; charset=UTF-8\r\n";
     resp << "Content-Length: " << errBody.size() << "\r\n";
-    resp << "Connection: close\r\n";
-    resp << "\r\n";
+    resp << "Connection: close\r\n\r\n";
     resp << errBody;
     return resp.str();
 }
 
-const std::string HttpResponse::createPostResponse(const HttpRequest &request, const ServerConfig & config) const
+// POST handler: validates, resolves target path from location, writes body, returns 201
+const std::string HttpResponse::createPostResponse(
+    const HttpRequest &request,
+    const ServerConfig & config
+) const
 {
-    // 0) Find best matching location and verify POST is allowed
-    const std::string& fullUri = request.getUri();
-    std::string uri = fullUri;
+    // Strip query
+    std::string uri = request.getUri();
     std::string::size_type qpos = uri.find('?');
     if (qpos != std::string::npos) uri = uri.substr(0, qpos);
 
-    // longest-prefix match
+    // Match location by longest prefix
     const LocationConfig* best = NULL;
     size_t bestLen = 0;
     for (size_t i = 0; i < config.locations.size(); ++i) {
-        const std::string& p = config.locations[i].location;
-        if (p.empty()) continue;
-        if (uri.compare(0, p.size(), p) == 0 && p.size() > bestLen) {
+        const std::string &p = config.locations[i].location;
+        if (!p.empty()
+            && uri.compare(0, p.size(), p) == 0
+            && p.size() > bestLen) {
             best = &config.locations[i];
             bestLen = p.size();
         }
     }
     if (!best) {
-        // No matching location configured for this path
-        std::ostringstream resp;
-        const std::string msg = "<html><body><h1>405 Method Not Allowed</h1><p>No matching location</p></body></html>";
+        std::ostringstream resp; const std::string msg = "<html><body><h1>405 Method Not Allowed</h1><p>No matching location</p></body></html>";
         resp << request.getHttpVersion() << " 405 Method Not Allowed\r\n";
-        resp << "Allow: GET\r\n"; // minimal; adjust if you support more globally
+        resp << "Allow: GET\r\n";
         resp << "Content-Type: text/html; charset=UTF-8\r\n";
         resp << "Content-Length: " << msg.size() << "\r\n";
-        resp << "Connection: close\r\n\r\n";
-        resp << msg;
-        return resp.str();
+        resp << "Connection: close\r\n\r\n" << msg; return resp.str();
     }
-
-    // Check allowed methods in location
     bool postAllowed = false;
     for (size_t i = 0; i < best->allowed_methods.size(); ++i) {
         if (best->allowed_methods[i] == "POST") { postAllowed = true; break; }
     }
     if (!postAllowed) {
-        std::ostringstream resp;
-        const std::string msg = "<html><body><h1>405 Method Not Allowed</h1></body></html>";
+        std::ostringstream resp; const std::string msg = "<html><body><h1>405 Method Not Allowed</h1></body></html>";
         resp << request.getHttpVersion() << " 405 Method Not Allowed\r\n";
-        // Optionally include Allow header with the location's methods
-        if (!best->allowed_methods.empty()) {
-            std::ostringstream allow;
-            allow << "Allow: ";
-            for (size_t i = 0; i < best->allowed_methods.size(); ++i) {
-                if (i) allow << ", ";
-                allow << best->allowed_methods[i];
-            }
-            allow << "\r\n";
-            resp << allow.str();
-        }
+        if (!best->allowed_methods.empty()) { std::ostringstream allow; allow << "Allow: "; for (size_t i=0;i<best->allowed_methods.size();++i){ if(i) allow << ", "; allow << best->allowed_methods[i]; } allow << "\r\n"; resp << allow.str(); }
         resp << "Content-Type: text/html; charset=UTF-8\r\n";
         resp << "Content-Length: " << msg.size() << "\r\n";
-        resp << "Connection: close\r\n\r\n";
-        resp << msg;
-        return resp.str();
+        resp << "Connection: close\r\n\r\n" << msg; return resp.str();
     }
 
-    // 1) Content-Length required (no Transfer-Encoding support)
+    // Content-Length required
     const std::map<std::string, std::string> &hdrs = request.getHeaders();
     std::map<std::string, std::string>::const_iterator it = hdrs.find("Content-Length");
     if (it == hdrs.end()) it = hdrs.find("content-length");
     if (it == hdrs.end()) {
-        std::ostringstream resp;
-        const std::string msg = "<html><body><h1>411 Length Required</h1></body></html>";
+        std::ostringstream resp; const std::string msg = "<html><body><h1>411 Length Required</h1></body></html>";
         resp << request.getHttpVersion() << " 411 Length Required\r\n";
         resp << "Content-Type: text/html; charset=UTF-8\r\n";
         resp << "Content-Length: " << msg.size() << "\r\n";
-        resp << "Connection: close\r\n\r\n";
-        resp << msg;
-        return resp.str();
+        resp << "Connection: close\r\n\r\n" << msg; return resp.str();
     }
 
-    // Parse Content-Length (digits only)
     unsigned long content_length = 0;
     {
         std::string cl = it->second;
-        // trim spaces
-        while (!cl.empty() && (cl[0] == ' ' || cl[0] == '\t')) cl.erase(0,1);
-        while (!cl.empty() && (cl[cl.size()-1] == ' ' || cl[cl.size()-1] == '\t')) cl.erase(cl.size()-1,1);
-        for (size_t i = 0; i < cl.size(); ++i) {
-            if (cl[i] < '0' || cl[i] > '9') { content_length = 0; break; }
+        while (!cl.empty() && (cl[0]==' '||cl[0]=='\t')) cl.erase(0,1);
+        while (!cl.empty() && (cl[cl.size()-1]==' '||cl[cl.size()-1]=='\t')) cl.erase(cl.size()-1,1);
+        for (size_t i=0;i<cl.size();++i) {
+            if (cl[i]<'0'||cl[i]>'9') { content_length = 0; break; }
         }
         std::istringstream iss(cl);
         iss >> content_length;
     }
 
     const std::string &bodyRef = request.getBody();
-
-    // Enforce client_max_body_size
     if (config.client_max_body_size > 0) {
         if (content_length > config.client_max_body_size || bodyRef.size() > config.client_max_body_size) {
-            std::ostringstream resp;
-            const std::string msg = "<html><body><h1>413 Payload Too Large</h1></body></html>";
+            std::ostringstream resp; const std::string msg = "<html><body><h1>413 Payload Too Large</h1></body></html>";
             resp << request.getHttpVersion() << " 413 Payload Too Large\r\n";
             resp << "Content-Type: text/html; charset=UTF-8\r\n";
             resp << "Content-Length: " << msg.size() << "\r\n";
-            resp << "Connection: close\r\n\r\n";
-            resp << msg;
-            return resp.str();
+            resp << "Connection: close\r\n\r\n" << msg; return resp.str();
         }
     }
-
     if (bodyRef.size() < content_length) {
-        std::ostringstream resp;
-        const std::string msg = "<html><body><h1>400 Bad Request</h1><p>Incomplete body</p></body></html>";
+        std::ostringstream resp; const std::string msg = "<html><body><h1>400 Bad Request</h1><p>Incomplete body</p></body></html>";
         resp << request.getHttpVersion() << " 400 Bad Request\r\n";
         resp << "Content-Type: text/html; charset=UTF-8\r\n";
         resp << "Content-Length: " << msg.size() << "\r\n";
-        resp << "Connection: close\r\n\r\n";
-        resp << msg;
-        return resp.str();
+        resp << "Connection: close\r\n\r\n" << msg; return resp.str();
     }
 
-    // 2) Resolve upload base directory
+    // Base dir resolution
     std::string baseDir;
-    if (!best->upload_dir.empty()) baseDir = best->upload_dir; // explicit upload dir wins
-    else if (!best->path.empty()) baseDir = best->path;        // filesystem base for this location
+    if (!best->upload_dir.empty()) baseDir = best->upload_dir;
+    else if (!best->path.empty()) baseDir = best->path;
     else {
-        // fall back to mapping location to root
         if (best->location == "/") baseDir = request.getRoot();
         else {
             std::string loc = best->location;
-            if (!loc.empty() && loc[0] == '/') loc.erase(0,1);
+            if (!loc.empty() && loc[0]=='/') loc.erase(0,1);
             baseDir = request.getRoot() + "/" + loc;
         }
     }
 
-    // strip matched prefix from URI to get filename/suffix
     std::string suffix = uri.substr(bestLen);
-    if (!suffix.empty() && suffix[0] == '/') suffix.erase(0,1);
-
-    // Basic validation: require a filename, disallow traversal
+    if (!suffix.empty() && suffix[0]=='/') suffix.erase(0,1);
     if (suffix.empty() || suffix.find("..") != std::string::npos) {
-        std::ostringstream resp;
-        const std::string msg = "<html><body><h1>400 Bad Request</h1><p>Invalid target path</p></body></html>";
+        std::ostringstream resp; const std::string msg = "<html><body><h1>400 Bad Request</h1><p>Invalid target path</p></body></html>";
         resp << request.getHttpVersion() << " 400 Bad Request\r\n";
         resp << "Content-Type: text/html; charset=UTF-8\r\n";
         resp << "Content-Length: " << msg.size() << "\r\n";
-        resp << "Connection: close\r\n\r\n";
-        resp << msg;
-        return resp.str();
+        resp << "Connection: close\r\n\r\n" << msg; return resp.str();
     }
 
-    // Build full target path
-    std::string targetPath = baseDir;
-    if (!targetPath.empty() && targetPath[targetPath.size()-1] != '/') targetPath += "/";
-    targetPath += suffix;
-
-    // Attempt to write file (create/overwrite)
+    std::string targetPath = baseDir; if (!targetPath.empty() && targetPath[targetPath.size()-1] != '/') targetPath += "/"; targetPath += suffix;
     int wfd = open(targetPath.c_str(), O_WRONLY | O_CREAT | O_TRUNC, 0644);
     if (wfd < 0) {
-        std::ostringstream resp;
-        const std::string msg = "<html><body><h1>500 Internal Server Error</h1><p>Cannot open target</p></body></html>";
+        std::ostringstream resp; const std::string msg = "<html><body><h1>500 Internal Server Error</h1><p>Cannot open target</p></body></html>";
         resp << request.getHttpVersion() << " 500 Internal Server Error\r\n";
         resp << "Content-Type: text/html; charset=UTF-8\r\n";
         resp << "Content-Length: " << msg.size() << "\r\n";
-        resp << "Connection: close\r\n\r\n";
-        resp << msg;
-        return resp.str();
+        resp << "Connection: close\r\n\r\n" << msg; return resp.str();
     }
-    // write exactly content_length bytes
     ssize_t toWrite = static_cast<ssize_t>(content_length);
     ssize_t written = 0;
     const char* data = bodyRef.data();
     while (written < toWrite) {
         ssize_t n = write(wfd, data + written, toWrite - written);
-        if (n < 0) { close(wfd); unlink(targetPath.c_str());
+        if (n < 0) {
+            close(wfd);
+            unlink(targetPath.c_str());
             std::ostringstream resp;
             const std::string msg = "<html><body><h1>500 Internal Server Error</h1><p>Write failed</p></body></html>";
             resp << request.getHttpVersion() << " 500 Internal Server Error\r\n";
             resp << "Content-Type: text/html; charset=UTF-8\r\n";
             resp << "Content-Length: " << msg.size() << "\r\n";
-            resp << "Connection: close\r\n\r\n";
-            resp << msg;
+            resp << "Connection: close\r\n\r\n" << msg;
             return resp.str();
         }
         written += n;
     }
     close(wfd);
 
-    // Build success response (201 Created)
-    std::ostringstream resp;
-    const std::string okBody = "<html><body><h1>201 Created</h1></body></html>";
+    std::ostringstream resp; const std::string okBody = "<html><body><h1>201 Created</h1></body></html>";
     resp << request.getHttpVersion() << " 201 Created\r\n";
-    // Location header with the URL path we saved to
     resp << "Location: " << uri << "\r\n";
     resp << "Content-Type: text/html; charset=UTF-8\r\n";
     resp << "Content-Length: " << okBody.size() << "\r\n";
-    resp << "Connection: close\r\n\r\n";
-    resp << okBody;
-    return resp.str();
+    resp << "Connection: close\r\n\r\n" << okBody; return resp.str();
 }
-
 
 const std::string HttpResponse::createDeleteResponse(const HttpRequest &request, const ServerConfig &config) const
 {
     (void) config;
-    // Minimal 501 (adjust later when implementing DELETE)
     const std::string body = "<html><body><h1>501 Not Implemented</h1></body></html>";
     std::ostringstream resp;
     resp << request.getHttpVersion() << " 501 Not Implemented\r\n";
     resp << "Content-Type: text/html; charset=UTF-8\r\n";
     resp << "Content-Length: " << body.size() << "\r\n";
-    resp << "Connection: close\r\n";
-    resp << "\r\n";
-    resp << body;
-    return resp.str();
+    resp << "Connection: close\r\n\r\n" << body; return resp.str();
 }
 
-const std::string HttpResponse::createGetResponse(const HttpRequest &request, const ServerConfig &config)
+// GET handler: maps URI to a file using location mapping and serves it
+const std::string HttpResponse::createGetResponse(
+    const HttpRequest &request,
+    const ServerConfig &config
+)
 {
     struct stat fileStat;
     int fd;
@@ -357,31 +288,23 @@ const std::string HttpResponse::createGetResponse(const HttpRequest &request, co
     char buffer[BUFF_SIZE];
     ssize_t n;
 
-    // Parse URI and strip query
-    std::string fullUri = request.getUri();
-    std::string uri = fullUri;
+    std::string uri = request.getUri();
     std::string::size_type qpos = uri.find('?');
     if (qpos != std::string::npos)
         uri = uri.substr(0, qpos);
 
-    std::cout << "URI => " << uri << std::endl;
-
-    // Longest-prefix location match
     const LocationConfig* best = NULL;
     size_t bestLen = 0;
-    for (size_t i = 0; i < config.locations.size(); ++i) {
+    for (size_t i=0; i<config.locations.size(); ++i) {
         const std::string &p = config.locations[i].location;
-        if (p.empty()) continue;
-        if (uri.compare(0, p.size(), p) == 0 && p.size() > bestLen) {
+        if (!p.empty() && uri.compare(0, p.size(), p) == 0 && p.size() > bestLen) {
             best = &config.locations[i];
             bestLen = p.size();
         }
     }
-
-    // If a location matched, enforce allowed methods
     if (best) {
         bool getAllowed = false;
-        for (size_t i = 0; i < best->allowed_methods.size(); ++i) {
+        for (size_t i=0; i<best->allowed_methods.size(); ++i) {
             if (best->allowed_methods[i] == "GET") { getAllowed = true; break; }
         }
         if (!getAllowed) {
@@ -391,7 +314,7 @@ const std::string HttpResponse::createGetResponse(const HttpRequest &request, co
             if (!best->allowed_methods.empty()) {
                 std::ostringstream allow;
                 allow << "Allow: ";
-                for (size_t i = 0; i < best->allowed_methods.size(); ++i) {
+                for (size_t i=0; i<best->allowed_methods.size(); ++i) {
                     if (i) allow << ", ";
                     allow << best->allowed_methods[i];
                 }
@@ -400,39 +323,31 @@ const std::string HttpResponse::createGetResponse(const HttpRequest &request, co
             }
             resp << "Content-Type: text/html; charset=UTF-8\r\n";
             resp << "Content-Length: " << msg.size() << "\r\n";
-            resp << "Connection: close\r\n\r\n";
-            resp << msg;
+            resp << "Connection: close\r\n\r\n" << msg;
             return resp.str();
         }
     }
 
-    // Security: reject traversal
-    if (uri.find("..") != std::string::npos) {
-        return createErrorResponse(request, HTTP_FORBIDDEN);
-    }
+    if (uri.find("..") != std::string::npos) { return createErrorResponse(request, HTTP_FORBIDDEN); }
 
-    // Derive base directory and suffix using location, if matched
     std::string baseDir;
     std::string suffix;
     if (best) {
-        // Prefer explicit filesystem path for this location
         if (!best->path.empty()) baseDir = best->path;
-        else if (!best->upload_dir.empty()) baseDir = best->upload_dir; // allow serving uploads if configured only here
+        else if (!best->upload_dir.empty()) baseDir = best->upload_dir;
         else if (best->location == "/") baseDir = request.getRoot();
         else {
             std::string loc = best->location;
-            if (!loc.empty() && loc[0] == '/') loc.erase(0,1);
-            baseDir = request.getRoot() + "/" + loc;
+            if(!loc.empty() && loc[0]=='/') loc.erase(0,1);
+            baseDir = request.getRoot()+"/"+loc;
         }
         suffix = uri.substr(bestLen);
-        if (!suffix.empty() && suffix[0] == '/') suffix.erase(0,1);
+        if(!suffix.empty() && suffix[0]=='/') suffix.erase(0,1);
     } else {
-        // No location: fallback to server root
         baseDir = request.getRoot();
-        if (!uri.empty() && uri[0] == '/') suffix = uri.substr(1); else suffix = uri;
+        if(!uri.empty() && uri[0]=='/') suffix = uri.substr(1); else suffix = uri;
     }
 
-    // If no specific file requested, try index files in baseDir
     bool isDirectoryRequest = (suffix.empty() || suffix[suffix.size()-1] == '/');
     std::string tryPath;
     if (isDirectoryRequest) {
@@ -446,7 +361,6 @@ const std::string HttpResponse::createGetResponse(const HttpRequest &request, co
             }
         }
         if (path.empty()) {
-            // No index file – either 403 (no listing) or autoindex if supported (not implemented)
             return createErrorResponse(request, HTTP_FORBIDDEN);
         }
     } else {
@@ -455,31 +369,18 @@ const std::string HttpResponse::createGetResponse(const HttpRequest &request, co
         path += suffix;
     }
 
-    std::cout << "PATH => " << path << std::endl;
-
-    if (stat(path.c_str(), &fileStat) != 0) {
-        return createErrorResponse(request, HTTP_NOT_FOUND);
-    }
-    if (access(path.c_str(), R_OK) != 0) {
-        return createErrorResponse(request, HTTP_FORBIDDEN);
-    }
+    if (stat(path.c_str(), &fileStat) != 0) { return createErrorResponse(request, HTTP_NOT_FOUND); }
+    if (access(path.c_str(), R_OK) != 0) { return createErrorResponse(request, HTTP_FORBIDDEN); }
 
     fd = open(path.c_str(), O_RDONLY);
-    if (fd < 0) {
-        return createErrorResponse(request, HTTP_INTERNAL_SERVER_ERROR);
-    }
-
+    if (fd < 0) { return createErrorResponse(request, HTTP_INTERNAL_SERVER_ERROR); }
     body.clear();
     while ((n = read(fd, buffer, sizeof(buffer))) > 0) {
         body.append(buffer, n);
     }
-    if (n < 0) {
-        close(fd);
-        return createErrorResponse(request, HTTP_INTERNAL_SERVER_ERROR);
-    }
+    if (n < 0) { close(fd); return createErrorResponse(request, HTTP_INTERNAL_SERVER_ERROR); }
     close(fd);
 
-    // Very basic content type guessing
     std::string ctype = "application/octet-stream";
     std::string::size_type dot = path.rfind('.');
     if (dot != std::string::npos) {
@@ -495,8 +396,7 @@ const std::string HttpResponse::createGetResponse(const HttpRequest &request, co
     }
     setContentType(ctype);
 
-    createOkResponse(request);
-    return fullResponse;
+    createOkResponse(request); return fullResponse;
 }
 
 // Define missing function: 405 for unknown/unsupported methods
@@ -509,25 +409,17 @@ const std::string HttpResponse::createUnknowResponse(const HttpRequest &request,
     resp << "Allow: GET, POST, DELETE\r\n";
     resp << "Content-Type: text/html; charset=UTF-8\r\n";
     resp << "Content-Length: " << body.size() << "\r\n";
-    resp << "Connection: close\r\n";
-    resp << "\r\n";
-    resp << body;
-    return resp.str();
+    resp << "Connection: close\r\n\r\n" << body; return resp.str();
 }
 
-std::string HttpResponse::createResponse(const HttpRequest &request, const ServerConfig& config)
+// Entry point: routes to method-specific handler
+std::string HttpResponse::createResponse(
+    const HttpRequest &request,
+    const ServerConfig& config)
 {
-    (void) config;
-    HttpResponse response;
-    std::string rawResponse;
-
-    if (request.getMethod() == "GET")
-        rawResponse = response.createGetResponse(request, config);
-    else if (request.getMethod() == "POST")
-        rawResponse = response.createPostResponse(request, config);
-    else if (request.getMethod() == "DELETE")
-        rawResponse = response.createDeleteResponse(request, config);
-    else
-        rawResponse = response.createUnknowResponse(request, config);
-    return (rawResponse);
+    HttpResponse response; const std::string& method = request.getMethod();
+    if (method == "GET") return response.createGetResponse(request, config);
+    else if (method == "POST") return response.createPostResponse(request, config);
+    else if (method == "DELETE") return response.createDeleteResponse(request, config);
+    else return response.createUnknowResponse(request, config);
 }

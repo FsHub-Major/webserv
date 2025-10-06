@@ -81,47 +81,32 @@ std::string ClientManager::readFullRequest(int socket_fd) {
         }
         
         request.append(buffer, valread);
-        
+
         // Check if headers are complete (double CRLF)
-        if (request.find("\r\n\r\n") != std::string::npos) {
-            // Check if body is complete (if Content-Length present)
-            size_t header_end = request.find("\r\n\r\n");
-            std::string headers = request.substr(0, header_end);
-            
-            // Extract Content-Length (use stringstream instead of atoi)
-            size_t cl_pos = headers.find("Content-Length: ");
-            if (cl_pos != std::string::npos) {
-                size_t cl_end = headers.find("\r\n", cl_pos);
-                std::string cl_str = (cl_end == std::string::npos)
-                    ? headers.substr(cl_pos + 16)
-                    : headers.substr(cl_pos + 16, cl_end - cl_pos - 16);
-                size_t content_length = 0;
-                {
-                    std::istringstream iss(cl_str);
-                    // On failure, content_length remains 0 (mirrors atoi behavior)
-                    iss >> content_length;
-                    // if (content_length < 0) content_length = 0;
-                }
-
-        request.append(buffer, n);
-
         size_t header_end = request.find("\r\n\r\n");
-        if (header_end == std::string::npos) continue; // keep reading headers
+        if (header_end == std::string::npos) {
+            continue; // keep reading headers
+        }
 
         // If Content-Length present, ensure we have the whole body
         const std::string headers = request.substr(0, header_end);
         size_t cl_pos = headers.find("Content-Length: ");
         if (cl_pos != std::string::npos) {
             size_t cl_end = headers.find("\r\n", cl_pos);
-            std::string cl_val = headers.substr(cl_pos + 16, cl_end - cl_pos - 16);
+            std::string cl_val = (cl_end == std::string::npos)
+                ? headers.substr(cl_pos + 16)
+                : headers.substr(cl_pos + 16, cl_end - cl_pos - 16);
             cl_val = trim(cl_val, " \t\r\n");
             int content_length = stringtoi(cl_val);
             if (content_length < 0) content_length = 0;
 
             size_t body_start = header_end + 4;
             size_t have = request.size() - body_start;
-            if (have < static_cast<size_t>(content_length)) continue; // need more
+            if (have < static_cast<size_t>(content_length)) {
+                continue; // need more
+            }
         }
+        // Headers complete and either no Content-Length or body complete
         return request;
     }
 }
@@ -129,9 +114,6 @@ std::string ClientManager::readFullRequest(int socket_fd) {
 // poll variant: readable_fds are those with POLLIN ready
 void ClientManager::processClientRequestPoll(const std::vector<int>& readable_fds)
 {
-    HttpRequest request;
-    std::string response;
-
     for (size_t i = 0; i < readable_fds.size(); ++i) {
         int socket_fd = readable_fds[i];
 

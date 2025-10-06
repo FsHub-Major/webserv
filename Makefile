@@ -14,8 +14,18 @@ SRC_DIR = src
 #include
 INC= -I includes
 
-# Source and Object Files - recursive search
-SRC = $(shell find $(SRC_DIR) -name "*.cpp" -type f)
+# Source and Object Files - explicit list to avoid duplicate sources
+SRC = \
+	$(SRC_DIR)/webserv.cpp \
+	$(SRC_DIR)/Server.cpp \
+	$(SRC_DIR)/ClientManager.cpp \
+	$(SRC_DIR)/Config.cpp \
+	$(SRC_DIR)/http/HttpRequest.cpp \
+	$(SRC_DIR)/http/HttpResponse.cpp \
+	$(SRC_DIR)/utils/split.cpp \
+	$(SRC_DIR)/utils/stringtoi.cpp \
+	$(SRC_DIR)/utils/trim.cpp
+
 OBJ = $(patsubst $(SRC_DIR)/%.cpp,$(OBJ_DIR)/%.o,$(SRC))
 
 # Debugging
