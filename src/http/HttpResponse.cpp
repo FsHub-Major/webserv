@@ -155,12 +155,27 @@ const std::string HttpResponse::createPostResponse(
         if (best->allowed_methods[i] == "POST") { postAllowed = true; break; }
     }
     if (!postAllowed) {
-        std::ostringstream resp; const std::string msg = "<html><body><h1>405 Method Not Allowed</h1></body></html>";
+        std::ostringstream resp;
+        const std::string msg = "<html><body><h1>405 Method Not Allowed</h1></body></html>";
+
         resp << request.getHttpVersion() << " 405 Method Not Allowed\r\n";
-        if (!best->allowed_methods.empty()) { std::ostringstream allow; allow << "Allow: "; for (size_t i=0;i<best->allowed_methods.size();++i){ if(i) allow << ", "; allow << best->allowed_methods[i]; } allow << "\r\n"; resp << allow.str(); }
+
+        if (!best->allowed_methods.empty()) {
+            std::ostringstream allow;
+            allow << "Allow: ";
+            for (size_t i = 0; i < best->allowed_methods.size(); ++i) {
+                if (i) allow << ", ";
+                allow << best->allowed_methods[i];
+            }
+            allow << "\r\n";
+            resp << allow.str();
+        }
+
         resp << "Content-Type: text/html; charset=UTF-8\r\n";
         resp << "Content-Length: " << msg.size() << "\r\n";
-        resp << "Connection: close\r\n\r\n" << msg; return resp.str();
+        resp << "Connection: close\r\n\r\n";
+        resp << msg;
+        return resp.str();
     }
 
     // Content-Length required
@@ -228,7 +243,11 @@ const std::string HttpResponse::createPostResponse(
         resp << "Connection: close\r\n\r\n" << msg; return resp.str();
     }
 
-    std::string targetPath = baseDir; if (!targetPath.empty() && targetPath[targetPath.size()-1] != '/') targetPath += "/"; targetPath += suffix;
+    std::string targetPath = baseDir;
+    if (!targetPath.empty() && targetPath[targetPath.size() - 1] != '/') {
+        targetPath += "/";
+    }
+    targetPath += suffix;
     int wfd = open(targetPath.c_str(), O_WRONLY | O_CREAT | O_TRUNC, 0644);
     if (wfd < 0) {
         std::ostringstream resp; const std::string msg = "<html><body><h1>500 Internal Server Error</h1><p>Cannot open target</p></body></html>";
@@ -257,12 +276,15 @@ const std::string HttpResponse::createPostResponse(
     }
     close(wfd);
 
-    std::ostringstream resp; const std::string okBody = "<html><body><h1>201 Created</h1></body></html>";
+    std::ostringstream resp;
+    const std::string okBody = "<html><body><h1>201 Created</h1></body></html>";
     resp << request.getHttpVersion() << " 201 Created\r\n";
     resp << "Location: " << uri << "\r\n";
     resp << "Content-Type: text/html; charset=UTF-8\r\n";
     resp << "Content-Length: " << okBody.size() << "\r\n";
-    resp << "Connection: close\r\n\r\n" << okBody; return resp.str();
+    resp << "Connection: close\r\n\r\n";
+    resp << okBody;
+    return resp.str();
 }
 
 const std::string HttpResponse::createDeleteResponse(const HttpRequest &request, const ServerConfig &config) const
