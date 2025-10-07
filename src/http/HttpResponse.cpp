@@ -387,7 +387,8 @@ const std::string HttpResponse::createGetResponse(
         }
     } else {
         path = baseDir;
-        if (!path.empty() && path[path.size()-1] != '/') path += "/";
+        if (!path.empty() && path[path.size()-1] != '/')
+            path += "/";
         path += suffix;
     }
 
