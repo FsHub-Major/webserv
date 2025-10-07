@@ -299,10 +299,7 @@ const std::string HttpResponse::createDeleteResponse(const HttpRequest &request,
 }
 
 // GET handler: maps URI to a file using location mapping and serves it
-const std::string HttpResponse::createGetResponse(
-    const HttpRequest &request,
-    const ServerConfig &config
-)
+const std::string HttpResponse::createGetResponse(const HttpRequest &request, const ServerConfig &config)
 {
     struct stat fileStat;
     int fd;
@@ -319,7 +316,8 @@ const std::string HttpResponse::createGetResponse(
     size_t bestLen = 0;
     for (size_t i=0; i<config.locations.size(); ++i) {
         const std::string &p = config.locations[i].location;
-        if (!p.empty() && uri.compare(0, p.size(), p) == 0 && p.size() > bestLen) {
+        if (!p.empty() && uri.compare(0, p.size(), p) == 0 && p.size() > bestLen) 
+        {
             best = &config.locations[i];
             bestLen = p.size();
         }
@@ -327,7 +325,11 @@ const std::string HttpResponse::createGetResponse(
     if (best) {
         bool getAllowed = false;
         for (size_t i=0; i<best->allowed_methods.size(); ++i) {
-            if (best->allowed_methods[i] == "GET") { getAllowed = true; break; }
+            if (best->allowed_methods[i] == "GET") 
+            {
+                getAllowed = true;
+                break; 
+            }
         }
         if (!getAllowed) {
             std::ostringstream resp;
@@ -350,24 +352,34 @@ const std::string HttpResponse::createGetResponse(
         }
     }
 
-    if (uri.find("..") != std::string::npos) { return createErrorResponse(request, HTTP_FORBIDDEN); }
+    if (uri.find("..") != std::string::npos) {
+        return createErrorResponse(request, HTTP_FORBIDDEN); 
+    }
 
     std::string baseDir;
     std::string suffix;
     if (best) {
-        if (!best->path.empty()) baseDir = best->path;
-        else if (!best->upload_dir.empty()) baseDir = best->upload_dir;
-        else if (best->location == "/") baseDir = request.getRoot();
+        if (!best->path.empty())
+            baseDir = best->path;
+        else if (!best->upload_dir.empty()) 
+            baseDir = best->upload_dir;
+        else if (best->location == "/")
+            baseDir = request.getRoot();
         else {
             std::string loc = best->location;
-            if(!loc.empty() && loc[0]=='/') loc.erase(0,1);
+            if(!loc.empty() && loc[0]=='/') 
+                loc.erase(0,1);
             baseDir = request.getRoot()+"/"+loc;
         }
         suffix = uri.substr(bestLen);
-        if(!suffix.empty() && suffix[0]=='/') suffix.erase(0,1);
+        if(!suffix.empty() && suffix[0]=='/')
+            suffix.erase(0,1);
     } else {
         baseDir = request.getRoot();
-        if(!uri.empty() && uri[0]=='/') suffix = uri.substr(1); else suffix = uri;
+        if(!uri.empty() && uri[0]=='/')
+            suffix = uri.substr(1); 
+        else
+            suffix = uri;
     }
 
     bool isDirectoryRequest = (suffix.empty() || suffix[suffix.size()-1] == '/');
@@ -375,7 +387,8 @@ const std::string HttpResponse::createGetResponse(
     if (isDirectoryRequest) {
         for (size_t i = 0; i < config.index_files.size(); ++i) {
             tryPath = baseDir;
-            if (!tryPath.empty() && tryPath[tryPath.size()-1] != '/') tryPath += "/";
+            if (!tryPath.empty() && tryPath[tryPath.size()-1] != '/')
+                tryPath += "/";
             tryPath += config.index_files[i];
             if (stat(tryPath.c_str(), &fileStat) == 0 && !S_ISDIR(fileStat.st_mode)) {
                 path = tryPath;
