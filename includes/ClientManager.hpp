@@ -46,7 +46,6 @@ private:
     int findFreeSlot();
     int findClientBySocket(int socket_fd);
     void handleClientData(int index);
-    void sendHttpResponse(int socket_fd);
     std::string readFullRequest(int socket_fd);
 
 };

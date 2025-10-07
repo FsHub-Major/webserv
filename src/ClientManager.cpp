@@ -145,15 +145,6 @@ void ClientManager::processClientRequestPoll(const std::vector<int>& readable_fd
     }
 }
 
-void ClientManager::sendHttpResponse(int socket_fd) {
-    std::string http_response = 
-        "HTTP/1.1 200 OK\r\n"
-        "Content-Type: text/html\r\n"
-        "Content-Length: 13\r\n"
-        "\r\n"
-        "Hello World!";
-    send(socket_fd, http_response.c_str(), http_response.length(), 0);
-}
 
 void ClientManager::updateActivity(int socket_fd) {
     std::map<int, Client>::iterator it = clients.find(socket_fd);
