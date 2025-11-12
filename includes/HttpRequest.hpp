@@ -41,6 +41,7 @@ private:
    const std::map<std::string,std::string>   &getHeaders() const;
    const std::string                         &getHeader(const std::string& key) const;
    const std::string                         &getRoot() const;
+   const std::string                         &getBody() const;
  private:
    void  parseQuery();
 };
