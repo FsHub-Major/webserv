@@ -15,10 +15,13 @@ void HttpRequest::parseQuery(void)
     for(std::size_t i = 0; i < query.size(); i++)
     {
         std::size_t eq = query[i].find_first_of('=');
-        if (eq == std::string::npos) {
+        if (eq == std::string::npos)
+        {
             key = query[i];
             val.clear();
-        } else {
+        }
+        else
+        {
             key = query[i].substr(0, eq);
             val = query[i].substr(eq + 1);
         }
@@ -45,8 +48,11 @@ bool HttpRequest::parseRequest(const std::string &request, const std::string roo
     std::getline(req_stream, line);
     while (std::getline(req_stream, line) && line != "\r")
     {
-        key = line.substr(0, line.find_first_of(':'));
-        val = trim(line.substr(line.find_first_of(':') + 1), " \r");
+        size_t colon_pos = line.find_first_of(':');
+        if (colon_pos == std::string::npos || colon_pos + 1 >= line.size())
+            continue;
+        key = line.substr(0, colon_pos);
+        val = trim(line.substr(colon_pos + 1), " \r");
         headers[key] = val;
     }
     

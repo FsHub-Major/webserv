@@ -98,12 +98,10 @@ bool ClientManager::readPartial(int socket_fd, std::string &buffer, size_t max_b
     if (n > 0)
     {
         buffer.append(tmp, n);
-        return true;
+        return (true);
     }
     if (n == 0) // connection closed by peer
         return (false);
-    // For n < 0, we avoid errno checks; treat as transient and keep socket.
-    // The poller will notify again if there's more to read or an error.
     return (true);
 }
 
@@ -111,17 +109,25 @@ static size_t parse_content_length(const std::string &headers)
 {
     size_t cl_pos = headers.find("Content-Length:");
     size_t hdr_end = headers.find("\r\n\r\n");
-    size_t val_start = cl_pos + 15;
-    size_t val_end = headers.find("\r\n", val_start);
-    int len = stringtoi(trim(headers.substr(val_start, val_end - val_start), " \t\r\n"));
 
     if (cl_pos == std::string::npos)
         return (size_t)-1;
     if (hdr_end == std::string::npos)
         return (size_t)-1;
+
+    size_t val_start = cl_pos + 15;
+    if (val_start >= headers.size())
+        return (size_t)-1;
+    
+    size_t val_end = headers.find("\r\n", val_start);
     while (val_start < hdr_end && (headers[val_start] == ' ' || headers[val_start] == '\t'))
         ++val_start;
     if (val_end == std::string::npos || val_end > hdr_end) val_end = hdr_end;
+    
+    if (val_start >= val_end || val_start >= headers.size())
+        return (size_t)-1;
+    
+    int len = stringtoi(trim(headers.substr(val_start, val_end - val_start), " \t\r\n"));
     if (len < 0) len = 0;
     return (static_cast<size_t>(len));
 }
@@ -166,10 +172,12 @@ void ClientManager::processClientRequestPoll(const std::vector<int>& readable_fd
             continue;
         }
 
+        // Update activity since we successfully received data
+        updateActivity(socket_fd);
+
         // Only proceed when full request is available
         if (!requestComplete(cli.recv_buffer))
         {
-            updateActivity(socket_fd);
             continue; // wait for more data
         }
 
@@ -185,11 +193,9 @@ void ClientManager::processClientRequestPoll(const std::vector<int>& readable_fd
             removeClient(socket_fd);
             continue;
         }
-        updateActivity(socket_fd);
-
-        // Clear buffer for next request on keep-alive; if expecting persistent
-        // connections, consider parsing only consumed bytes. For now, we clear.
-        cli.recv_buffer.clear();
+        
+        // Since we send "Connection: close" in all responses, close the connection
+        removeClient(socket_fd);
     }
 }
 
@@ -207,7 +213,7 @@ void ClientManager::checkTimeouts()
     time_t current_time = time(NULL);
     std::map<int, Client>::iterator it = clients.begin();
     while (it != clients.end()) {
-        if (current_time - it->second.last_activity > CLIENT_TIMEOUT) {
+        if (current_time - it->second.last_activity >= config.client_timeout) {
             printf("Client timeout: socket fd %d\n", it->first);
             int socket_fd = it->first;
             ++it;
