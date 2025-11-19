@@ -1,18 +1,27 @@
 #include "ClientManager.hpp"
 #include "HttpRequest.hpp"
 #include "HttpResponse.hpp"
-#include "webserv.hpp"
 #include "macros.hpp"
-#include <iostream>
+
+#include <ctime>
 #include <sstream>
-#include <cstring>
-#include <unistd.h>
-#include <arpa/inet.h>
-#include "ext_libs.hpp"
+
+namespace {
+
+std::string formatEndpoint(const sockaddr_in &addr)
+{
+    std::ostringstream oss;
+    oss << inet_ntoa(addr.sin_addr) << ':' << ntohs(addr.sin_port);
+    return oss.str();
+}
+
+const std::size_t kReadChunk = 4096u;
+
+} // namespace
 
 ClientManager::ClientManager(const ServerConfig & config) : config(config) {
 
-    std::cout << " ClientManager Constructor called" << std::endl;
+    std::cout << "ClientManager constructed" << std::endl;
 }
 
 ClientManager::~ClientManager() {
@@ -20,7 +29,7 @@ ClientManager::~ClientManager() {
         close(it->first); 
     }
     clients.clear();
-    std::cout << " ~ClientManager called" << std::endl;
+    std::cout << "ClientManager destroyed" << std::endl;
 }
 
 
@@ -33,15 +42,15 @@ bool ClientManager::addClient(int socket_fd, const struct sockaddr_in& addr) {
     Client new_client;
     new_client.socket_fd = socket_fd;
     new_client.address = addr;
-    new_client.last_activity = time(NULL);
+    new_client.last_activity = std::time(NULL);
     new_client.is_active = true;
     new_client.recv_buffer.clear();
     
     clients[socket_fd] = new_client;
     
-    printf("Client added: socket fd %d, IP %s, port %d (total: %d)\n",
-           socket_fd, inet_ntoa(addr.sin_addr), ntohs(addr.sin_port), 
-           getClientCount());
+    std::cout << "Client added: fd=" << socket_fd
+              << " endpoint=" << formatEndpoint(addr)
+              << " total=" << getClientCount() << std::endl;
     
     return true;
 }
@@ -50,11 +59,9 @@ bool ClientManager::addClient(int socket_fd, const struct sockaddr_in& addr) {
 void ClientManager::removeClient(int socket_fd) {
     std::map<int, Client>::iterator it = clients.find(socket_fd);
     if (it != clients.end()) {
-        printf("Client disconnected: socket fd %d, IP %s, port %d (remaining: %d)\n",
-               it->first,
-               inet_ntoa(it->second.address.sin_addr),
-               ntohs(it->second.address.sin_port),
-               getClientCount() - 1);
+        std::cout << "Client disconnected: fd=" << it->first
+                  << " endpoint=" << formatEndpoint(it->second.address)
+                  << " remaining=" << getClientCount() - 1 << std::endl;
         
         close(it->first);
         it->second.recv_buffer.clear();
@@ -90,22 +97,28 @@ std::string ClientManager::readFullRequest(int socket_fd)
     return req;
 }
 
-bool ClientManager::readPartial(int socket_fd, std::string &buffer, size_t max_bytes)
+ClientManager::ReadResult ClientManager::readPartial(int socket_fd, std::string &buffer, size_t max_bytes)
 {
     char tmp[4096];
-    size_t to_read = (max_bytes < sizeof(tmp)) ? max_bytes : sizeof(tmp);
-    int n = recv(socket_fd, tmp, to_read, 0);
+    const size_t to_read = (max_bytes < sizeof(tmp)) ? max_bytes : sizeof(tmp);
+    const int n = recv(socket_fd, tmp, to_read, 0);
+
     if (n > 0)
     {
         buffer.append(tmp, n);
-        return (true);
+        return ClientManager::READ_OK;
     }
-    if (n == 0) // connection closed by peer
-        return (false);
-    return (true);
+    if (n == 0)
+    {
+        std::cout << "Client closed connection: fd=" << socket_fd << std::endl;
+        return ClientManager::READ_CLOSED; // connection closed by peer
+    }
+
+    std::cerr << "Read error on socket fd=" << socket_fd << std::endl;
+    return ClientManager::READ_ERROR;
 }
 
-static size_t parse_content_length(const std::string &headers)
+static size_t parseContentLength(const std::string &headers)
 {
     size_t cl_pos = headers.find("Content-Length:");
     size_t hdr_end = headers.find("\r\n\r\n");
@@ -134,7 +147,7 @@ static size_t parse_content_length(const std::string &headers)
 
 bool ClientManager::requestComplete(const std::string &buffer)
 {
-    size_t need = parse_content_length(buffer);
+    size_t need = parseContentLength(buffer);
     size_t hdr_end = buffer.find("\r\n\r\n");
     size_t body_start = hdr_end + 4;
     size_t cl_pos = buffer.find("Content-Length:");
@@ -152,8 +165,6 @@ bool ClientManager::requestComplete(const std::string &buffer)
 // poll variant: readable_fds are those with POLLIN ready
 void ClientManager::processClientRequestPoll(const std::vector<int>& readable_fds)
 {
-    // Small per-iteration read budget per client
-    const size_t kChunk = 4096; // 4KB per readiness event
     HttpRequest request;
     std::string response;
 
@@ -163,10 +174,11 @@ void ClientManager::processClientRequestPoll(const std::vector<int>& readable_fd
         if (it == clients.end())
             continue;
 
-        Client &cli = it->second;
+        Client &cli = it->second; 
 
-        // Read a small chunk and return to event loop quickly
-        if (!readPartial(socket_fd, cli.recv_buffer, kChunk))
+        // Read a small chunk and handle failures explicitly
+    ClientManager::ReadResult status = readPartial(socket_fd, cli.recv_buffer, kReadChunk);
+    if (status != ClientManager::READ_OK)
         {
             removeClient(socket_fd);
             continue;
@@ -203,18 +215,18 @@ void ClientManager::processClientRequestPoll(const std::vector<int>& readable_fd
 void ClientManager::updateActivity(int socket_fd) {
     std::map<int, Client>::iterator it = clients.find(socket_fd);
     if (it != clients.end()) {
-        it->second.last_activity = time(NULL);
+        it->second.last_activity = std::time(NULL);
     }
 }
 
 
 void ClientManager::checkTimeouts()
 {
-    time_t current_time = time(NULL);
+    const time_t current_time = std::time(NULL);
     std::map<int, Client>::iterator it = clients.begin();
     while (it != clients.end()) {
         if (current_time - it->second.last_activity >= config.client_timeout) {
-            printf("Client timeout: socket fd %d\n", it->first);
+            std::cout << "Client timeout: fd=" << it->first << std::endl;
             int socket_fd = it->first;
             ++it;
             removeClient(socket_fd);

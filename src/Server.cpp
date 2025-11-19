@@ -1,15 +1,20 @@
 
 #include "Server.hpp"
 #include "macros.hpp"
-#include "debug.hpp"
+
+#include <cstring>
 
 Server::Server(const ServerConfig & config)
-        : config(config), clients(config), server_fd(-1) ,is_running(false), is_init(false)
+    : config(config)
+    , clients(config)
+    , address()
+    , server_fd(-1)
+    , is_running(false)
+    , is_init(false)
 {
-    std::memset(&address, 0 , sizeof(address));
+    std::memset(&address, 0, sizeof(address));
     address.sin_family = AF_INET;
     address.sin_addr.s_addr = inet_addr("127.0.0.1"); // localhost
-    // address.sin_addr.s_addr = INADDR_ANY;
     address.sin_port = htons(config.port);
 #ifdef __linux__
     epoll_fd = -1;
@@ -191,7 +196,7 @@ bool Server::handleNewConnection()
     int new_socket = accept(server_fd, (struct sockaddr*) &client_addr, &client_len);
     if (new_socket < 0)
     {
-        perror("accept failer");
+        perror("accept");
         return (false);
     }
     printf("New connection: socket fd is %d, IP is %s, port %d\n",

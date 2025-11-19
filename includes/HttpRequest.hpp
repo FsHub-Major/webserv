@@ -28,8 +28,8 @@ private:
    HttpRequest();
     
     // Main parsing function
-   bool                                      parseRequest(const std::string& rawRequest, 
-                                                const std::string root);
+  bool                                      parseRequest(const std::string& rawRequest, 
+                                const std::string& root);
     
     // Utility functions
    void                                      printRequest() const;

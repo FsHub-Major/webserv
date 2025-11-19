@@ -6,20 +6,19 @@
 #include <arpa/inet.h>
 #include <unistd.h>
 #include <fcntl.h>      // for open() and O_* flags
-#include <vector>
-#include <climits>
 #include <sys/stat.h>
-#include <sstream>
-#include <map>
-#include <iostream>
-#include <cstring>
-#include <string>
-#include <fstream>
-#include <cstdio> 
-#include <time.h> // time functions 
-#include <sys/time.h> //gettimeofday
+#include <sys/time.h>   // gettimeofday
 
-using namespace std; 
+#include <climits>
+#include <cstdio>
+#include <cstring>
+#include <fstream>
+#include <iostream>
+#include <map>
+#include <sstream>
+#include <string>
+#include <time.h>       // time functions
+#include <vector>
 
 std::vector<std::string> split(const std::string& s, std::string delimiters);
 std::string trim(const std::string& str, const std::string& trim_chars);

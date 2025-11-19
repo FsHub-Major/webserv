@@ -1,17 +1,21 @@
 #include "HttpRequest.hpp"
 #include "ext_libs.hpp"
 
-HttpRequest::HttpRequest(void)
+HttpRequest::HttpRequest()
+    : isQuery(false)
 {
-    isQuery = false;
 }
 
 void HttpRequest::parseQuery(void)
 {
-    vector<std::string> query;
+    std::vector<std::string> query;
     std::string key, val;
 
-    query = split(uri.substr(uri.find_first_of('?') + 1), "&");
+    std::string::size_type query_pos = uri.find_first_of('?');
+    if (query_pos == std::string::npos || query_pos + 1 >= uri.size())
+        return;
+
+    query = split(uri.substr(query_pos + 1), "&");
     for(std::size_t i = 0; i < query.size(); i++)
     {
         std::size_t eq = query[i].find_first_of('=');
@@ -29,39 +33,42 @@ void HttpRequest::parseQuery(void)
     }
 }
 
-bool HttpRequest::parseRequest(const std::string &request, const std::string root)
+bool HttpRequest::parseRequest(const std::string &request, const std::string &root)
 {
-    std::string line;
-    std::string key;
-    std::string val;
-
     rawRequest = request;
     this->root = root;
+
     std::istringstream req_stream(request);
-    req_stream >> method >> uri >> httpVersion;
+    if (!(req_stream >> method >> uri >> httpVersion))
+        return false;
 
     if (uri.find('?') != std::string::npos)
     {
         parseQuery();
         isQuery = true;
     }
-    std::getline(req_stream, line);
+
+    std::string line;
+    std::getline(req_stream, line); // consume rest of request line
     while (std::getline(req_stream, line) && line != "\r")
     {
-        size_t colon_pos = line.find_first_of(':');
+        const size_t colon_pos = line.find_first_of(':');
         if (colon_pos == std::string::npos || colon_pos + 1 >= line.size())
             continue;
-        key = line.substr(0, colon_pos);
-        val = trim(line.substr(colon_pos + 1), " \r");
-        headers[key] = val;
+
+        const std::string key = trim(line.substr(0, colon_pos), " \t");
+        const std::string value = trim(line.substr(colon_pos + 1), " \r\t");
+        if (!key.empty())
+            headers[key] = value;
     }
     
-    std::string::size_type header_end = request.find("\r\n\r\n");
+    const std::string::size_type header_end = request.find("\r\n\r\n");
     if (header_end != std::string::npos)
         body = request.substr(header_end + 4);
     else
         body.clear();
-    return (true);
+
+    return true;
 }
 
 void HttpRequest::printRequest(void) const
