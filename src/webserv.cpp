@@ -1,13 +1,28 @@
 // Minimal HTTP server in C++ using BSD sockets
 
 #include <iostream>
+#include <stdexcept>
 #include <vector>
+#include <csignal>
+#include <signal.h>
+#include <sys/wait.h>
+#include <unistd.h>
+#include <cerrno>
+#include <cstring>
+#include <cstdlib>
 
 #include "macros.hpp"
 #include "Config.hpp"
 #include "Server.hpp"
 
 namespace {
+
+struct ServerProcess
+{
+    pid_t pid;
+    int port;
+    std::string name;
+};
 
 LocationConfig buildLocation(const std::string &route,
                              const std::string &path,
@@ -18,6 +33,12 @@ LocationConfig buildLocation(const std::string &route,
     location.path = path;
     location.allowed_methods = methods;
     location.autoindex = false;
+    location.upload_dir.clear();
+    location.cgi_extensions.clear();
+    location.cgi_path.clear();
+    location.has_return = false;
+    location.return_code = 0;
+    location.return_target.clear();
     return location;
 }
 
@@ -56,9 +77,125 @@ void printStartupBanner(const ServerConfig &config)
     std::cout << "Serving root: " << config.root << std::endl;
 }
 
-} // namespace
+volatile sig_atomic_t g_stopRequested = 0;
 
-Server * g_server = NULL;
+void handleTerminationSignal(int)
+{
+    g_stopRequested = 1;
+}
+
+void installSignalHandlers()
+{
+    struct sigaction sa;
+    std::memset(&sa, 0, sizeof(sa));
+    sa.sa_handler = handleTerminationSignal;
+    sigemptyset(&sa.sa_mask);
+    sigaction(SIGINT, &sa, NULL);
+    sigaction(SIGTERM, &sa, NULL);
+}
+
+std::vector<ServerConfig> loadServerConfigs(const std::string &config_path)
+{
+    if (config_path.empty())
+    {
+        std::cout << "Using embedded sample configuration (no config file specified)." << std::endl;
+        return std::vector<ServerConfig>(1, buildDefaultConfig());
+    }
+
+    Config config(config_path);
+    const std::vector<ServerConfig> &parsed_servers = config.getServers();
+    if (parsed_servers.empty())
+        throw std::runtime_error("Config did not produce any server entries");
+
+    config.printDebug(std::cout);
+    std::vector<ServerConfig> servers(parsed_servers.begin(), parsed_servers.end());
+    return servers;
+}
+
+pid_t spawnServerProcess(const ServerConfig &server_config)
+{
+    pid_t pid = fork();
+    if (pid < 0)
+        throw std::runtime_error(std::string("fork() failed: ") + std::strerror(errno));
+
+    if (pid == 0)
+    {
+        Server server(server_config);
+        if (!server.init())
+        {
+            std::cerr << "Failed to init server on port " << server_config.port << std::endl;
+            _exit(EXIT_FAILURE);
+        }
+
+        printStartupBanner(server_config);
+        server.run();
+        std::cout << "Server shutdown finished successfully (port " << server_config.port << ")" << std::endl;
+        _exit(EXIT_SUCCESS);
+    }
+
+    return pid;
+}
+
+void terminateChildren(const std::vector<ServerProcess> &children)
+{
+    for (std::vector<ServerProcess>::const_iterator it = children.begin(); it != children.end(); ++it)
+    {
+        if (it->pid > 0)
+            kill(it->pid, SIGTERM);
+    }
+}
+
+void monitorChildren(std::vector<ServerProcess> &children)
+{
+    bool terminationBroadcast = false;
+
+    while (!children.empty())
+    {
+        if (g_stopRequested && !terminationBroadcast)
+        {
+            std::cout << "\nTermination requested, stopping all servers..." << std::endl;
+            terminateChildren(children);
+            terminationBroadcast = true;
+        }
+
+        int status = 0;
+        pid_t pid = waitpid(-1, &status, 0);
+        if (pid < 0)
+        {
+            if (errno == EINTR)
+                continue;
+            perror("waitpid");
+            break;
+        }
+
+        for (std::vector<ServerProcess>::iterator it = children.begin(); it != children.end(); ++it)
+        {
+            if (it->pid != pid)
+                continue;
+
+            if (WIFEXITED(status))
+            {
+                std::cout << "Server PID " << pid << " (" << it->name << ":" << it->port
+                          << ") exited with status " << WEXITSTATUS(status) << std::endl;
+            }
+            else if (WIFSIGNALED(status))
+            {
+                std::cout << "Server PID " << pid << " (" << it->name << ":" << it->port
+                          << ") terminated by signal " << WTERMSIG(status) << std::endl;
+            }
+            else
+            {
+                std::cout << "Server PID " << pid << " (" << it->name << ":" << it->port
+                          << ") stopped" << std::endl;
+            }
+
+            children.erase(it);
+            break;
+        }
+    }
+}
+
+} // namespace
 
 int main(int ac, char *av[]) {
     if (ac > 2)
@@ -68,33 +205,42 @@ int main(int ac, char *av[]) {
     }
 
     const std::string config_path = (ac == 2) ? av[1] : "";
-    if (!config_path.empty())
-    {
-        std::cout << "Config parsing from file is not implemented yet."
-                  << " Falling back to the embedded sample." << std::endl;
-    }
+    std::vector<ServerProcess> children;
 
     try
     {
-        const ServerConfig server_config = buildDefaultConfig();
-        Server server(server_config);
-        g_server = &server;
+        installSignalHandlers();
 
-        if (!server.init())
+        const std::vector<ServerConfig> server_configs = loadServerConfigs(config_path);
+        std::cout << "Launching " << server_configs.size() << " server instance(s)." << std::endl;
+
+        for (std::vector<ServerConfig>::const_iterator it = server_configs.begin(); it != server_configs.end(); ++it)
         {
-            std::cerr << "Failed to init server on port " << server_config.port << std::endl;
-            return 1;
+            pid_t pid = spawnServerProcess(*it);
+            ServerProcess process;
+            process.pid = pid;
+            process.port = it->port;
+            process.name = it->server_name;
+            children.push_back(process);
+
+            std::cout << "Spawned server PID " << pid << " on port " << process.port
+                      << " (" << process.name << ")" << std::endl;
         }
 
-        printStartupBanner(server_config);
-        server.run();
+        monitorChildren(children);
     }
     catch (const std::exception& e)
     {
+        if (!children.empty())
+        {
+            terminateChildren(children);
+            int status = 0;
+            while (waitpid(-1, &status, WNOHANG) > 0) {}
+        }
         std::cerr << "Error: " << e.what() << std::endl;
         return 1;
     }
 
-    std::cout << "Server shutdown finished successfully" << std::endl;
+    std::cout << "All server processes stopped cleanly" << std::endl;
     return 0;
 }
