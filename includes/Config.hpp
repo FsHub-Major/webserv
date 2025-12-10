@@ -17,6 +17,7 @@ struct LocationConfig
     std::string upload_dir;
     std::vector<std::string> cgi_extensions;
     std::string cgi_path;
+    std::string fastcgi_pass; // host:port or unix socket path
     bool has_return;
     int return_code;
     std::string return_target;

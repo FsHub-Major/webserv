@@ -211,6 +211,7 @@ void Config::printDebug(std::ostream& os) const
 				}
 			}
 			os << std::endl;
+			os << "      FastCGI Pass: " << (loc.fastcgi_pass.empty() ? "(none)" : loc.fastcgi_pass) << std::endl;
 
 			if (loc.has_return)
 				os << "      Redirect: " << loc.return_code << " -> " << loc.return_target << std::endl;
@@ -391,6 +392,7 @@ LocationConfig Config::parseLocationBlock(std::ifstream& file, const std::string
 	location.upload_dir.clear();
 	location.cgi_extensions.clear();
 	location.cgi_path.clear();
+	location.fastcgi_pass.clear();
 	location.has_return = false;
 	location.return_code = 0;
 	location.return_target.clear();
@@ -428,6 +430,8 @@ LocationConfig Config::parseLocationBlock(std::ifstream& file, const std::string
 			location.cgi_extensions.assign(tokens.begin() + 1, tokens.end());
 		else if (directive == "cgi_path" && tokens.size() >= 2)
 			location.cgi_path = tokens[1];
+		else if (directive == "fastcgi_pass" && tokens.size() >= 2)
+			location.fastcgi_pass = tokens[1];
 		else if (directive == "return" && tokens.size() >= 3)
 		{
 			location.has_return = true;

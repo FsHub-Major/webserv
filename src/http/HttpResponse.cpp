@@ -1,6 +1,29 @@
 #include "HttpResponse.hpp"
 #include "Config.hpp"
 #include "macros.hpp"
+#include "FastCgiClient.hpp"
+#include "FastCgiClient.hpp"
+
+namespace {
+
+bool isFastCgiRequest(const LocationConfig *loc, const std::string &path)
+{
+    if (!loc || loc->fastcgi_pass.empty() || path.empty())
+        return false;
+
+    std::string::size_type dot = path.rfind('.');
+    if (dot == std::string::npos)
+        return false;
+    const std::string ext = path.substr(dot);
+    for (size_t i = 0; i < loc->cgi_extensions.size(); ++i)
+    {
+        if (loc->cgi_extensions[i] == ext)
+            return true;
+    }
+    return false;
+}
+
+} // namespace
 
 // Helper: map status code to reason phrase
 std::string HttpResponse::getReasonPhraseFromCode(int statusCode)
@@ -248,6 +271,18 @@ const std::string HttpResponse::createPostResponse(
         targetPath += "/";
     }
     targetPath += suffix;
+    if (isFastCgiRequest(best, targetPath))
+    {
+        struct stat st;
+        if (stat(targetPath.c_str(), &st) != 0)
+            return createErrorResponse(request, HTTP_NOT_FOUND);
+        if (access(targetPath.c_str(), R_OK) != 0)
+            return createErrorResponse(request, HTTP_FORBIDDEN);
+
+        FastCgiClient fcgi(request, config, *best, targetPath);
+        return fcgi.execute();
+    }
+
     int wfd = open(targetPath.c_str(), O_WRONLY | O_CREAT | O_TRUNC, 0644);
     if (wfd < 0) {
         std::ostringstream resp; const std::string msg = "<html><body><h1>500 Internal Server Error</h1><p>Cannot open target</p></body></html>";
@@ -407,6 +442,12 @@ const std::string HttpResponse::createGetResponse(const HttpRequest &request, co
 
     if (stat(path.c_str(), &fileStat) != 0) { return createErrorResponse(request, HTTP_NOT_FOUND); }
     if (access(path.c_str(), R_OK) != 0) { return createErrorResponse(request, HTTP_FORBIDDEN); }
+
+    if (isFastCgiRequest(best, path))
+    {
+        FastCgiClient fcgi(request, config, *best, path);
+        return fcgi.execute();
+    }
 
     fd = open(path.c_str(), O_RDONLY);
     if (fd < 0) { return createErrorResponse(request, HTTP_INTERNAL_SERVER_ERROR); }
