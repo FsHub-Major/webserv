@@ -8,6 +8,11 @@ webserv
 
 #tests 
 spawnTest
+fastcgi_tests
+integration_tests
+tests/fastcgi_tests
+tests/integration_tests
+tests/spawnTest
 
 # Compiled Object files
 *.slo
