@@ -9,13 +9,17 @@
 #include <sys/stat.h>
 #include <sys/time.h>   // gettimeofday
 
+#include <algorithm>
+#include <cctype>
 #include <climits>
 #include <cstdio>
+#include <cstdlib>
 #include <cstring>
 #include <fstream>
 #include <iostream>
 #include <map>
 #include <sstream>
+#include <stdexcept>
 #include <string>
 #include <time.h>       // time functions
 #include <vector>

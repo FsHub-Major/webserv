@@ -1,12 +1,6 @@
-
-
 #pragma once
 
-#include <fstream>
-#include <iosfwd>
-#include <string>
-#include <vector>
-#include <map>
+# include <ext_libs.hpp>
 
 struct LocationConfig
 {
@@ -48,8 +42,42 @@ public:
     
 private:
     void parseConfigFile(const std::string& path);
-    ServerConfig parseServerBlock(std::ifstream& file, std::string& line, const ServerConfig& defaults);
-    LocationConfig parseLocationBlock(std::ifstream& file, const std::string& location_path);
+    void parseGlobalDirective(ServerConfig& server_config,
+                             const std::vector<std::string>& tokens);
+    ServerConfig parseServerBlock(std::ifstream& file, const ServerConfig& global_config);
+    LocationConfig parseLocationBlock(std::ifstream& file,
+                                     const std::string& location_path);
+    void parseLocationDirective(LocationConfig& location,
+                               const std::vector<std::string>& tokens);
+    void validateServerBlockCompletion(bool has_listen, bool has_explicit_root,
+                                      bool found_closing_brace, const std::string& root);
+    
+    // Utility methods
     std::vector<std::string> split(const std::string& str, char delimiter);
     void trim(std::string& str);
+    std::vector<std::string> splitTokens(const std::string& statement);
+    std::string removeTrailingSemicolon(std::string line);
+    bool endsWithBrace(const std::string& line);
+    std::string stripInlineComment(const std::string& line);
+    
+    // Token parsing
+    int parsePortToken(const std::string& token);
+    size_t parseSizeToken(const std::string& token);
+    bool parseBoolToken(const std::string& value);
+    
+    // Validation
+    bool isKnownServerDirective(const std::string& directive);
+    void validateDirectiveValue(const std::string& directive,
+                               const std::vector<std::string>& tokens);
+    
+    // Configuration
+    ServerConfig createDefaultServerConfig();
+
+    // Parsing helpers (split from parseServerBlock)
+    std::string collectHeader(std::ifstream& file, const std::string& header);
+    bool isLocationHeader(const std::string& current);
+    void handleLocationHeader(std::ifstream& file, ServerConfig& server, const std::string& header);
+    void processServerDirective(ServerConfig& server, const std::string& directive,
+                                const std::vector<std::string>& tokens, bool& has_listen,
+                                bool& has_explicit_root);
 };
