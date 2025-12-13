@@ -9,8 +9,9 @@ TEST_BIN="tests/integration_tests"
 
 RED="\033[0;31m"; GREEN="\033[0;32m"; YELLOW="\033[0;33m"; NC="\033[0m"
 
+cd ..
 echo -e "${YELLOW}[RUN] Building server...${NC}"
-make -s
+make
 
 echo -e "${YELLOW}[RUN] Starting server...${NC}"
 if [[ -n "${CONFIG_FILE}" ]]; then
