@@ -1,12 +1,6 @@
-
-
 #pragma once
 
-#include <fstream>
-#include <iosfwd>
-#include <string>
-#include <vector>
-#include <map>
+#include "ext_libs.hpp"
 
 struct LocationConfig
 {

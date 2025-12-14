@@ -19,6 +19,12 @@
 #include <string>
 #include <time.h>       // time functions
 #include <vector>
+#include <algorithm>
+#include <cctype>
+#include <cstdlib>
+#include <iostream>
+#include <sstream>
+#include <stdexcept>
 
 std::vector<std::string> split(const std::string& s, std::string delimiters);
 std::string trim(const std::string& str, const std::string& trim_chars);

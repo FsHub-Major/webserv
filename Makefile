@@ -19,8 +19,12 @@ SRC = \
 	$(SRC_DIR)/webserv.cpp \
 	$(SRC_DIR)/Server.cpp \
 	$(SRC_DIR)/ClientManager.cpp \
-	$(SRC_DIR)/Config.cpp \
 	$(SRC_DIR)/FastCgiClient.cpp \
+	$(SRC_DIR)/config_parser/ConfigMain.cpp \
+	$(SRC_DIR)/config_parser/ConfigParser.cpp \
+	$(SRC_DIR)/config_parser/ConfigServerParser.cpp \
+	$(SRC_DIR)/config_parser/ConfigLocationParser.cpp \
+	$(SRC_DIR)/config_parser/ConfigUtils.cpp \
 	$(SRC_DIR)/http/HttpRequest.cpp \
 	$(SRC_DIR)/http/HttpResponse.cpp \
 	$(SRC_DIR)/utils/split.cpp \
