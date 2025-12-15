@@ -3,6 +3,7 @@
 #include "macros.hpp"
 #include "FastCgiClient.hpp"
 #include "FastCgiClient.hpp"
+#include <dirent.h>
 
 namespace {
 
@@ -418,29 +419,74 @@ const std::string HttpResponse::createGetResponse(const HttpRequest &request, co
     }
 
     bool isDirectoryRequest = (suffix.empty() || suffix[suffix.size()-1] == '/');
+    std::string dirPath = baseDir;
+    if (!dirPath.empty() && dirPath[dirPath.size() - 1] != '/')
+        dirPath += "/";
+    dirPath += suffix;
+    if (!dirPath.empty() && dirPath[dirPath.size() - 1] != '/')
+        dirPath += "/";
+
     std::string tryPath;
     if (isDirectoryRequest) {
         for (size_t i = 0; i < config.index_files.size(); ++i) {
-            tryPath = baseDir;
-            if (!tryPath.empty() && tryPath[tryPath.size()-1] != '/')
-                tryPath += "/";
-            tryPath += config.index_files[i];
+            tryPath = dirPath + config.index_files[i];
             if (stat(tryPath.c_str(), &fileStat) == 0 && !S_ISDIR(fileStat.st_mode)) {
                 path = tryPath;
                 break;
             }
         }
         if (path.empty()) {
+            struct stat dirStat;
+            if (stat(dirPath.c_str(), &dirStat) != 0 || !S_ISDIR(dirStat.st_mode)) {
+                return createErrorResponse(request, HTTP_NOT_FOUND);
+            }
+            if (best && best->autoindex) {
+                DIR *d = opendir(dirPath.c_str());
+                if (!d) return createErrorResponse(request, HTTP_FORBIDDEN);
+
+                std::ostringstream listing;
+                listing << "<html><body><h1>Index of " << uri << "</h1><ul>";
+                struct dirent *ent;
+                while ((ent = readdir(d)) != NULL) {
+                    const char *name = ent->d_name;
+                    if (!name) continue;
+                    if (strcmp(name, ".") == 0 || strcmp(name, "..") == 0) continue;
+                    listing << "<li><a href=\"" << uri;
+                    if (!uri.empty() && uri[uri.size() - 1] != '/') listing << "/";
+                    listing << name << "\">" << name << "</a></li>";
+                }
+                closedir(d);
+                listing << "</ul></body></html>";
+
+                std::ostringstream resp;
+                std::string bodyContent = listing.str();
+                resp << request.getHttpVersion() << " 200 OK\r\n";
+                resp << "Content-Type: text/html; charset=UTF-8\r\n";
+                resp << "Content-Length: " << bodyContent.size() << "\r\n";
+                resp << "Connection: close\r\n\r\n";
+                resp << bodyContent;
+                return resp.str();
+            }
             return createErrorResponse(request, HTTP_FORBIDDEN);
         }
     } else {
-        path = baseDir;
-        if (!path.empty() && path[path.size()-1] != '/')
-            path += "/";
-        path += suffix;
+        path = dirPath;
+        if (!path.empty() && path[path.size()-1] == '/')
+            path.erase(path.size()-1);
     }
 
     if (stat(path.c_str(), &fileStat) != 0) { return createErrorResponse(request, HTTP_NOT_FOUND); }
+    if (S_ISDIR(fileStat.st_mode)) {
+        if (uri.empty() || uri[uri.size() - 1] != '/') {
+            std::ostringstream resp;
+            resp << request.getHttpVersion() << " 301 Moved Permanently\r\n";
+            resp << "Location: " << uri << "/\r\n";
+            resp << "Content-Length: 0\r\n";
+            resp << "Connection: close\r\n\r\n";
+            return resp.str();
+        }
+        return createErrorResponse(request, HTTP_FORBIDDEN);
+    }
     if (access(path.c_str(), R_OK) != 0) { return createErrorResponse(request, HTTP_FORBIDDEN); }
 
     if (isFastCgiRequest(best, path))

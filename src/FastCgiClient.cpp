@@ -20,7 +20,7 @@ const unsigned char FCGI_END_REQUEST = 3;
 const unsigned char FCGI_PARAMS = 4;
 const unsigned char FCGI_STDIN = 5;
 const unsigned char FCGI_STDOUT = 6;
-const unsigned char FCGI_STDERR = 7;
+// const unsigned char FCGI_STDERR = 7;
 
 const unsigned short FCGI_RESPONDER = 1;
 
