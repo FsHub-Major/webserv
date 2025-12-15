@@ -24,50 +24,6 @@ struct ServerProcess
     std::string name;
 };
 
-LocationConfig buildLocation(const std::string &route,
-                             const std::string &path,
-                             const std::vector<std::string> &methods)
-{
-    LocationConfig location;
-    location.location = route;
-    location.path = path;
-    location.allowed_methods = methods;
-    location.autoindex = false;
-    location.upload_dir.clear();
-    location.cgi_extensions.clear();
-    location.cgi_path.clear();
-    location.has_return = false;
-    location.return_code = 0;
-    location.return_target.clear();
-    return location;
-}
-
-std::vector<std::string> allow(const std::string &method)
-{
-    std::vector<std::string> methods;
-    methods.push_back(method);
-    return methods;
-}
-
-ServerConfig buildDefaultConfig()
-{
-    ServerConfig config;
-    config.port = 8080;
-    config.server_name = "localhost";
-    config.root = "./site1/www";
-    config.index_files.push_back("index.html");
-    config.client_max_body_size = 1024 * 1024; // 1MB
-    config.client_timeout = CLIENT_TIMEOUT;
-    config.error_pages[404] = "./site1/www/errors/404.html";
-    config.error_pages[500] = "./site1/www/errors/500.html";
-
-    config.locations.push_back(buildLocation("/", config.root, allow("GET")));
-    config.locations.push_back(buildLocation("/images", "./site1/www/images", allow("GET")));
-    config.locations.push_back(buildLocation("/upload", "./site1/www/uploads", allow("POST")));
-
-    return config;
-}
-
 void printStartupBanner(const ServerConfig &config)
 {
     std::cout << "Server initialized successfully" << std::endl;
@@ -98,8 +54,8 @@ std::vector<ServerConfig> loadServerConfigs(const std::string &config_path)
 {
     if (config_path.empty())
     {
-        std::cout << "Using embedded sample configuration (no config file specified)." << std::endl;
-        return std::vector<ServerConfig>(1, buildDefaultConfig());
+        throw std::runtime_error("No configuration file provided. \
+            \nUsage: webserv <config_file_path>");
     }
 
     Config config(config_path);
@@ -198,13 +154,13 @@ void monitorChildren(std::vector<ServerProcess> &children)
 } // namespace
 
 int main(int ac, char *av[]) {
-    if (ac > 2)
+    if (ac != 2)
     {
-        std::cerr << "Usage: webserv [<config_file_path>]" << std::endl;
+        std::cerr << "Usage: webserv <config_file_path>" << std::endl;
         return 1;
     }
 
-    const std::string config_path = (ac == 2) ? av[1] : "";
+    const std::string config_path = av[1];
     std::vector<ServerProcess> children;
 
     try
