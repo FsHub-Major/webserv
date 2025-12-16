@@ -16,7 +16,9 @@ INC= -I includes
 
 # Source and Object Files - explicit list to avoid duplicate sources
 SRC = \
-	$(SRC_DIR)/webserv.cpp \
+	$(SRC_DIR)/main.cpp \
+	$(SRC_DIR)/ProcessManager.cpp \
+	$(SRC_DIR)/FastCgiBackend.cpp \
 	$(SRC_DIR)/Server.cpp \
 	$(SRC_DIR)/ClientManager.cpp \
 	$(SRC_DIR)/FastCgiClient.cpp \
