@@ -21,6 +21,7 @@ ServerConfig Config::parseServerBlock(std::ifstream& file, std::string& line, co
 	bool found_closing_brace = false;
 
 	std::string raw_line;
+	std::vector<std::string> server_methods;
 	while (std::getline(file, raw_line))
 	{
 		std::string current = ConfigUtils::stripInlineComment(raw_line);
@@ -74,6 +75,7 @@ ServerConfig Config::parseServerBlock(std::ifstream& file, std::string& line, co
 			continue;
 
 		const std::string directive = tokens[0];
+		static std::vector<std::string> server_methods;
 		if (directive == "listen")
 		{
 			if (tokens.size() < 2)
@@ -132,6 +134,14 @@ ServerConfig Config::parseServerBlock(std::ifstream& file, std::string& line, co
 			// For now just mark as valid directive
 			has_directives = true;
 		}
+		else if (directive == "methods" || directive == "allow_methods" || directive == "allowed_methods")
+		{
+			if (tokens.size() < 2)
+				throw std::runtime_error("methods directive requires at least one value");
+			has_directives = true;
+			server_methods.assign(tokens.begin() + 1, tokens.end());
+			server.allowed_methods = server_methods;
+		}
 		else
 			throw std::runtime_error("Unknown server directive: " + directive);
 	}
@@ -142,5 +152,19 @@ ServerConfig Config::parseServerBlock(std::ifstream& file, std::string& line, co
 		throw std::runtime_error("Empty server block (no directives)");
 	if (server.root.empty())
 		throw std::runtime_error("Server block missing root directive (must be set globally or per-server)");
+
+	// Apply server-level methods to locations that did not explicitly set methods
+	if (!server_methods.empty()) {
+		for (size_t i = 0; i < server.locations.size(); ++i) {
+			LocationConfig &loc = server.locations[i];
+			if (!loc.has_methods) {
+				loc.allowed_methods = server_methods;
+			}
+		}
+	}
+
+	// clear server_methods for next server block
+	server_methods.clear();
+
 	return server;
 }

@@ -18,6 +18,7 @@ LocationConfig Config::parseLocationBlock(std::ifstream& file, const std::string
 	location.path = location_path;
 	location.allowed_methods.clear();
 	location.autoindex = false;
+	location.has_methods = false;
 	location.upload_dir.clear();
 	location.cgi_extensions.clear();
 	location.cgi_path.clear();
@@ -58,6 +59,7 @@ LocationConfig Config::parseLocationBlock(std::ifstream& file, const std::string
 			if (tokens.size() < 2)
 				throw std::runtime_error("methods directive requires at least one value");
 			location.allowed_methods.assign(tokens.begin() + 1, tokens.end());
+			location.has_methods = true;
 		}
 		else if (directive == "autoindex" && tokens.size() >= 2)
 			location.autoindex = ConfigUtils::parseBoolToken(tokens[1]);
