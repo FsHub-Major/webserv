@@ -27,7 +27,6 @@ void	ProcessManager::installSignalHandlers(void)
 
 void	ProcessManager::printBanner(const ServerConfig &config) const
 {
-	std::cout << "Server initialized successfully" << std::endl;
 	std::cout << "Open in your browser:" << std::endl;
 	std::cout << "  -> http://127.0.0.1:" << config.port << "/" << std::endl;
 	std::cout << "  -> http://localhost:" << config.port << "/" << std::endl;

@@ -104,13 +104,13 @@ void Server::buildPollFds()
 }
 
 void Server::run() {
-    if (!is_init) {
+    if (!is_init)
+    {
         std::cerr << "Server not initialized" << std::endl;
         return;
     }
     is_running = true;
 
-    std::cout << "Server running on port " << config.port << std::endl;
 #ifdef __APPLE__
     while (is_running)
     {
