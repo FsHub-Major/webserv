@@ -7,11 +7,13 @@ struct LocationConfig
     std::string location;
     std::string path;
     std::vector<std::string> allowed_methods;
+    bool has_methods;
     bool autoindex;
     std::string upload_dir;
     std::vector<std::string> cgi_extensions;
     std::string cgi_path;
     std::string fastcgi_pass; // host:port or unix socket path
+    // whether methods were explicitly set in this location
     bool has_return;
     int return_code;
     std::string return_target;
@@ -26,6 +28,7 @@ struct ServerConfig
     std::map<int, std::string> error_pages;
     size_t client_max_body_size;
     int client_timeout;
+    std::vector<std::string> allowed_methods;
     std::vector<LocationConfig> locations;
 };
 
