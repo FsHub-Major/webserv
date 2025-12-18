@@ -19,9 +19,9 @@ const std::size_t kReadChunk = 4096u;
 
 } // namespace
 
-ClientManager::ClientManager(const ServerConfig & config) : config(config) {
-
-    std::cout << "ClientManager constructed" << std::endl;
+ClientManager::ClientManager(const ServerConfig & config) : config(config)
+{
+    
 }
 
 ClientManager::~ClientManager() {
